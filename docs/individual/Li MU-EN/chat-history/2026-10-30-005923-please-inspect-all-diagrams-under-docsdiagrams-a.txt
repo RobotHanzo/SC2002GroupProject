@@ -1,0 +1,253 @@
+
+> <browser_instruction># Claude in Chrome browser automation
+
+  You have access to browser automation tools (mcp__claude-in-chrome__*) for
+  interacting with web pages in Chrome. Follow these guidelines for effective
+  browser automation.
+
+  ## Loading deferred tools
+
+  If the mcp__claude-in-chrome__* tools are deferred (must be loaded via
+  ToolSearch before use), load every tool you expect to need in ONE ToolSearch
+  call — the select query accepts a comma-separated list — never one call per
+  tool. Start with the core set:
+
+  ToolSearch with query
+  "select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__naviga
+  te,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__read_page,mcp__clau
+  de-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__tabs_close_mcp"
+
+  Add task-specific tools to the same call when the task obviously needs them:
+  read_console_messages / read_network_requests for debugging, form_input for
+  forms, gif_creator for recordings, javascript_tool for page scripting.
+
+  ## GIF recording
+
+  When performing multi-step browser interactions that the user may want to
+  review or share, use mcp__claude-in-chrome__gif_creator to record them.
+
+  You must ALWAYS:
+  * Capture extra frames before and after taking actions to ensure smooth
+  playback
+  * Name the file meaningfully to help the user identify it later (e.g.,
+  "login_process.gif")
+
+  ## Console log debugging
+
+  You can use mcp__claude-in-chrome__read_console_messages to read console
+  output. Console output may be verbose. If you are looking for specific log
+  entries, use the 'pattern' parameter with a regex-compatible pattern. This
+  filters results efficiently and avoids overwhelming output. For example, use
+  pattern: "[MyApp]" to filter for application-specific logs rather than
+  reading all console output.
+
+  ## Alerts and dialogs
+
+  IMPORTANT: Do not trigger JavaScript alerts, confirms, prompts, or browser
+  modal dialogs through your actions. These browser dialogs block all further
+  browser events and will prevent the extension from receiving any subsequent
+  commands. Instead, when possible, use console.log for debugging and then use
+  the mcp__claude-in-chrome__read_console_messages tool to read those log
+  messages. If a page has dialog-triggering elements:
+  1. Avoid clicking buttons or links that may trigger alerts (e.g., "Delete"
+  buttons with confirmation dialogs)
+  2. If you must interact with such elements, warn the user first that this may
+  interrupt the session
+  3. Use mcp__claude-in-chrome__javascript_tool to check for and dismiss any
+  existing dialogs before proceeding
+
+  If you accidentally trigger a dialog and lose responsiveness, inform the user
+  they need to manually dismiss it in the browser.
+
+  ## Avoid rabbit holes and loops
+
+  When using browser automation tools, stay focused on the specific task. If
+  you encounter any of the following, stop and ask the user for guidance:
+  - Unexpected complexity or tangential browser exploration
+  - Browser tool calls failing or returning errors after 2-3 attempts
+  - No response from the browser extension
+  - Page elements not responding to clicks or input
+  - Pages not loading or timing out
+  - Unable to complete the browser task despite multiple approaches
+
+  Explain what you attempted, what went wrong, and ask how the user would like
+  to proceed. Do not keep retrying the same failing browser action or explore
+  unrelated pages without checking in first.
+
+  ## Tab context and session startup
+
+  IMPORTANT: At the start of each browser automation session, call
+  mcp__claude-in-chrome__tabs_context_mcp first to get information about the
+  user's current browser tabs. Use this context to understand what the user
+  might want to work with before creating new tabs.
+
+  Never reuse tab IDs from a previous/other session. Follow these guidelines:
+  1. Only reuse an existing tab if the user explicitly asks to work with it
+  2. Otherwise, create a new tab with mcp__claude-in-chrome__tabs_create_mcp
+  3. If a tool returns an error indicating the tab doesn't exist or is invalid,
+  call tabs_context_mcp to get fresh tab IDs
+  4. When a tab is closed by the user or a navigation error occurs, call
+  tabs_context_mcp to see what tabs are available</browser_instruction>
+
+> Please inspect all diagrams under docs/diagrams against the project briefing
+  and the public project description
+  @"docs/SC2002_Restaurant_Rush_Group_Assignment.docx", and give a final
+  verdict, as well as what to improve to meet the published requirements.
+  ⎿  Read docs/SC2002_Restaurant_Rush_Group_Assignment.docx
+
+● I'll start by exploring the project structure and the public project description.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Now the briefing, assignment, README, and the three diagrams.
+
+  Read 5 files, ran 4 shell commands (ctrl+o to expand)
+
+● Found that docs/diagrams has only three class diagrams and no sequence
+  diagram. Now I'll zoom into the Stage 3 diagram at full resolution and look
+  for another way to read the briefing PDF since Read can't render it. · summary
+
+  Read 6 files, ran 2 shell commands (ctrl+o to expand)
+
+● Stage 3 detail is clear now. Next I'll extract text from the briefing PDF and
+  Ryan's two PDFs, since Stage 2 and 3.pdf started life in docs/diagrams and
+  could contain a sequence diagram.
+
+  Made 1 scratchpad edit +25, ran 2 shell commands (ctrl+o to expand)
+
+● Verdict: the published design-evidence requirements are not yet met. The class
+  diagrams are good, but the sequence diagram required by Section 5 of the public
+  project description is missing entirely.
+
+  I judged from the images only. The repo holds no source code and no
+  stage-1/2/3 tags (git tag -l is empty), so I could not check code alignment.
+
+  What is in docs/diagrams
+
+  - stage-1-class.jpg (docs/diagrams/stage-1-class.jpg), stage-2-class.png
+    (docs/diagrams/stage-2-class.png) and stage-3-class.png
+    (docs/diagrams/stage-3-class.png) satisfy the briefing's "3 class diagrams".
+  - There is no sequence diagram. The briefing asks for "3 class diagrams + 1
+    sequence diagram". The only PDFs in the repo are Ryan's reflection notes,
+    which contain no diagram.
+
+  Comparison with the public project description (Section 5)
+
+  Item: Model and coverage
+  Requirement: Show principal entities, necessary control and boundary classes,
+  and relevant enums in the final class diagram.
+  Observation: Has customer variants, 4 staff roles, controller, CLI, table,
+  order, menu, combo and HappyHour. The queue is only an attribute, and
+  HappyHour is a concrete class; discuss the design trade-off in the report.
+  ────────────────────────────────────────
+  Item: Relationships and notation
+  Requirement: Show inheritance and associations with relevant multiplicities.
+  Observation: Inheritance direction and multiplicities are right. Arrow styles are
+  inconsistent, and several links are unlabelled or undirected (listed under
+  "Class diagram fixes").
+  ────────────────────────────────────────
+  Item: Attributes, operations, encapsulation
+  Requirement: Show key attributes and operations with visibility, and annotate
+  meaningful examples of encapsulation, polymorphism and composition.
+  Observation: Visibility and types are good, but the annotations are missing.
+  OrderStatus also has no PAID, which the payment flow requires (Section 3.2).
+  Transition notes would help clarify that flow (details below).
+  ────────────────────────────────────────
+  Item: Clarity and code alignment
+  Requirement: The final class diagram must match the Stage 3 code.
+  Observation: Code alignment could not be checked without source code. The
+  diagram is 2787×5550 px with very long routed lines and a colour scheme with
+  no legend; improve readability for the report.
+  ────────────────────────────────────────
+  Item: Sequence diagram
+  Requirement: Show one complete scenario where a manager choice changes an
+  outcome, including arrival, order, staff assignments, READY then SERVED,
+  eating, payment, the result check, and one Stage 2 or 3 behaviour. Show
+  messages among the CLI, controller, staff and domain objects, with guards
+  and loops where relevant.
+  Observation: Missing.
+
+  Strengths
+
+  - Polymorphism is visible: getSatisfactionLoss, calculateBillCents,
+    chooseMenuItem and onServed are overridden by VIP and Critic, with abstract
+    members in italics.
+  - ComboMeal extends MenuItem and holds two MenuItems, so it is a real
+    composite.
+  - HappyHour shows used, remainingTurns and DURATION = 2, and Order shows
+    billCents and turnTaken, which evidences a locked price.
+  - Stage 1 contains nothing from later stages.
+
+  To meet the published requirements and improve design clarity
+
+  1. Add the required sequence diagram. Use one Stage 3 scenario in which a
+  manager choice changes a customer's outcome, for example the Waiter serves one
+  customer instead of taking another's order, so the second customer abandons.
+  - Lifelines: Manager, RestaurantCLI, GameController, Restaurant,
+    ArrivalSchedule, Host, Waiter, Chef, Cashier, HappyHour, VIPCustomer, Order,
+    Table.
+  - Order of events, labelled by turn:
+    - arrival and order, with the Happy Hour activation and the VIP price lock
+      ($15 → $13.50 → $10.80);
+    - Chef progress, then READY;
+    - Waiter serves on a later turn, with a guard that the order was already
+      READY;
+    - eating, then READY_TO_PAY;
+    - Cashier pays on a later turn, then recordPayment;
+    - the result check after turn 18.
+  - Notation:
+    - loop over turns 1..18;
+    - alt for an invalid choice (error shown, re-prompt, no task used);
+    - alt for abandonment at 0 satisfaction;
+    - opt for Happy Hour;
+    - alt for victory or defeat.
+  - Briefing extras: state the scenario's stage, starting conditions and
+    outcome.
+
+  2. Class diagram fixes:
+  - Missing PAID: OrderStatus has no PAID and Order has no markPaid(), but the
+    spec says payment marks the order PAID. Fix the diagram or the code, and add
+    notes or a small state diagram for legal Order and Customer transitions.
+  - Missing annotations: the assignment requires notes on encapsulation,
+    polymorphism and composition, and there are none. Add a legend for the
+    yellow, green and purple colouring, and a note documenting the Critic's
+    rule.
+  - Inconsistent arrows: Waiter → Table and Waiter → HappyHour are solid while
+    Host → Table is dashed. ArrivalSchedule → Customer "creates" should be a
+    dashed «create» dependency. The enum links are unlabelled. The RestaurantCLI
+    ↔ GameController link is undirected, though each holds a reference to the
+    other.
+  - Composition notation: staff "employs" lines have no diamond, unlike Table,
+    Menu and HappyHour.
+  - Menu multiplicity: Stage 3 shows 5 on Menu → MenuItem (Stage 2 shows 3).
+    Check it against the code, or use 3..*.
+  - Combo pricing: show that ComboMeal sets its own 90% price and summed prep
+    units, or add a note.
+  - Missing dependencies: Waiter → Menu, Customer → Menu, Cashier → Restaurant
+    and RestaurantCLI → Restaurant.
+  - Queue: show the waiting queue as its own ordered association.
+  - Readability: re-lay out the diagram to fit a landscape page. Printed in the
+    PDF it will be unreadable at the current size.
+  - Smaller points: the Stage 1 diagram has a typo (tabled for tableId) and is a
+    low-res JPG in a different style from Stages 2 and 3. Also check whether
+    #satisfaction needs to be protected.
+
+  3. Prepare the design discussion required by the public project description.
+  - Waiter.takeOrder signature churn: it changes at every stage (+Menu,
+    +currentTurn, then +HappyHour).
+  - No pricing-policy abstraction: HappyHour is threaded through Restaurant,
+    Waiter, Customer and GameController as a concrete class. Either introduce a
+    pricing-policy abstraction, or justify in the report why it isn't needed.
+    Don't add an interface just to tick a box.
+  - Duplicated seating: Host.seatCustomer and Waiter.seatCustomer duplicate each
+    other.
+  - Change explanations: explain which Stage 2→3 changes to existing classes
+    were necessary and why.
+
+  Before every tag, check each diagram against the code it describes, and commit
+  the diagram sources (Mermaid or Visual Paradigm) as well as the images.
+
+  Adding the sequence diagram and addressing the issues above would improve
+  alignment with the public project description. Final code alignment still
+  needs checking against the runnable stage tags. I can draft the sequence
+  diagram in Mermaid if you want.
