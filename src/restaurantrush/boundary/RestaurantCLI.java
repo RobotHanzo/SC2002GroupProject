@@ -73,7 +73,7 @@ public class RestaurantCLI {
             out.println("  (nobody has arrived yet)");
         }
         for (Customer customer : restaurant.getCustomers()) {
-            out.println(String.format(Locale.ROOT, "  %-4s %-8s satisfaction %3d  %-12s order: %s",
+            out.println(String.format(Locale.ROOT, "  %-4s %-8s satisfaction %3d  %-12s  order: %s",
                     "#" + customer.getId(), customer.getTypeLabel(), customer.getSatisfaction(), customer.getStatus(),
                     orderText(customer)));
         }
