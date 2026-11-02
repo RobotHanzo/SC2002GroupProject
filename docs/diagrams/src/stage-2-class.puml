@@ -27,11 +27,15 @@ hide empty members
 hide circle
 
 ' ---------- boundary and control ----------
-class RestaurantCLI <<boundary>> {
+class RestaurantCLI <<boundary>> #FAE8A6 {
   -controller: GameController
+  -input: Scanner
+  -out: PrintStream
+  +start(): void
   +readWaiterChoice(): String
   +readChefChoice(): String
   +displayTurnStatus(Restaurant): void
+  +displayMessage(String): void
   +displayError(String): void
   +displayResult(boolean, Restaurant): void
 }
@@ -43,6 +47,8 @@ class GameController <<control>> #FAE8A6 {
   -maxTurns: int
   -cli: RestaurantCLI
   +startGame(): void
+  +getCurrentTurn(): int
+  +getMaxTurns(): int
   -executeTurn(): void
   -processScheduledArrival(): void
   -coordinateStaffActions(): void
@@ -54,6 +60,7 @@ class GameController <<control>> #FAE8A6 {
 class ArrivalSchedule #CCEBD2 {
   -arrivalTurns: int[]
   -nextCustomerId: int
+  -customerTypes: List<IntFunction<Customer>>
   +isArrivalTurn(turn: int): boolean
   +createArrival(turn: int): Customer
 }
@@ -70,6 +77,7 @@ class Restaurant #FAE8A6 {
   -revenueCents: int
   +registerArrival(Customer): void
   +findAvailableTable(): Table
+  +findOldestEligiblePayer(turn: int): Customer
   +getMenu(): Menu
   +getWaiter(): Waiter
   +getChef(): Chef
@@ -79,6 +87,7 @@ class Restaurant #FAE8A6 {
   +recordPayment(amountCents: int): void
   +releaseTableOf(Customer): void
   +getPaidCustomerCount(): int
+  +getServedCustomerCount(): int
   +getAverageSatisfaction(): double
   +getRevenueCents(): int
   +handleAbandonment(Customer): void
@@ -113,7 +122,7 @@ class Chef {
   +prepare(Order): void
 }
 
-class Cashier {
+class Cashier #FAE8A6 {
   +processPayment(Customer, Restaurant): void
 }
 
@@ -148,10 +157,10 @@ abstract class Customer #FAE8A6 {
   +getOrder(): Order
   +markSeated(): void
   +markServed(turn: int): void
+  +canFinishEating(turn: int): boolean
   +markReadyToPay(turn: int): void
+  +canPay(turn: int): boolean
   +markPaid(): void
-  +getServedTurn(): int
-  +getReadyTurn(): int
   +shouldAbandon(): boolean
   +markAbandoned(): void
 }
@@ -320,8 +329,8 @@ note left of Customer
   satisfaction is private; subclasses change it only
   through adjustSatisfaction() (clamped 0..100).
   <b>TURN GUARDS</b>
-  Eats only if currentTurn > servedTurn;
-  pays only if currentTurn > readyTurn.
+  canFinishEating(turn): only after the serving turn.
+  canPay(turn): only after the READY_TO_PAY turn.
 end note
 
 note right of Waiter
@@ -344,17 +353,14 @@ note left of RegularCustomer #E8E8E8
   <back:#FAE8A6>  yellow  </back> changed since Stage 1
   <back:#DCEBF7>  blue  </back> unchanged
   <b>Changed since Stage 1</b>
-  Customer: abstract; chooseMenuItem() to chooseMenuItem(Menu);
-    + loss, billing and onServed hooks; + getServedTurn(),
-    getReadyTurn(); canFinishEating(turn) and canPay(turn)
-    removed (the turn guards are checked in GameController)
+  Customer: abstract; chooseMenuItem(List<MenuItem>) to
+    chooseMenuItem(Menu); + loss, billing and onServed hooks
   Order: getPriceCents() to getBillCents(); + billCents, turnTaken
-  Waiter: takeOrder(Customer, MenuItem) to
-    takeOrder(Customer, Menu, turn): Order; serveOrder + turn
-  Restaurant: registerArrival() to registerArrival(Customer);
-    recordPayment() to recordPayment(amountCents);
-    menuItems / getMenuItems() replaced by menu / getMenu();
-    findOldestEligiblePayer(turn) removed
-  GameController: + schedule
+  Waiter: takeOrder(Customer, MenuItem): void to
+    takeOrder(Customer, Menu, turn): Order; serveOrder calls onServed
+  Cashier: charges order.getBillCents()
+  Restaurant: registerArrival(): Customer to registerArrival(Customer);
+    menuItems / getMenuItems() replaced by menu / getMenu()
+  GameController: + schedule; RestaurantCLI: shows type and bill
 end note
 @enduml
