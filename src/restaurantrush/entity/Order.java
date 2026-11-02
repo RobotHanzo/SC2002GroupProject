@@ -13,10 +13,15 @@ public class Order {
     private final MenuItem item;
     private int completedUnits;
     private OrderStatus status;
+    private final int billCents;
+    private final int turnTaken;
 
-    public Order(MenuItem item) {
+    /** The bill is fixed here and has no setter: the price is locked when the order is taken. */
+    public Order(MenuItem item, int billCents, int turnTaken) {
         this.orderId = nextOrderId++;
         this.item = item;
+        this.billCents = billCents;
+        this.turnTaken = turnTaken;
         this.status = OrderStatus.PLACED;
     }
 
@@ -67,9 +72,12 @@ public class Order {
         return completedUnits;
     }
 
-    /** Stage 1 price: read straight from the item. */
-    public int getPriceCents() {
-        return item.getPriceCents();
+    public int getBillCents() {
+        return billCents;
+    }
+
+    public int getTurnTaken() {
+        return turnTaken;
     }
 
     private void require(OrderStatus expected, String action) {

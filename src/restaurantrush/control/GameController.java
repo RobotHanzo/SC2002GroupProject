@@ -129,11 +129,12 @@ public class GameController {
     private void takeOrder(Command command) {
         Customer customer = select(command, customersWithStatus(CustomerStatus.SEATED),
                 "no seated customer is waiting to order", "only a seated customer can order");
-        MenuItem item = customer.chooseMenuItem(restaurant.getMenu());
-        restaurant.getWaiter().takeOrder(customer, item);
+        Order order = restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), currentTurn);
+        MenuItem item = order.getItem();
         cli.displayMessage("Waiter takes the order of " + describe(customer) + ". They choose "
-                + item.getName() + " (" + Money.format(item.getPriceCents()) + ", "
-                + item.getPreparationUnits() + " preparation unit(s)).");
+                + item.getName() + " (list price " + Money.format(item.getPriceCents()) + ", "
+                + item.getPreparationUnits() + " preparation unit(s)). Bill locked at "
+                + Money.format(order.getBillCents()) + ".");
     }
 
     private void serve(Command command) {
@@ -164,7 +165,7 @@ public class GameController {
         }
         Customer payer = restaurant.findOldestEligiblePayer(currentTurn);
         if (payer != null) {
-            int bill = payer.getOrder().getPriceCents();
+            int bill = payer.getOrder().getBillCents();
             restaurant.getCashier().processPayment(payer, restaurant);
             cli.displayMessage("Cashier collects " + Money.format(bill) + " from " + describe(payer)
                     + " (satisfaction " + payer.getSatisfaction() + "). The table is free again.");

@@ -59,7 +59,7 @@ public final class GameTests {
 
     private static void orderMovesThroughLegalStatesOnly() {
         MenuItem pasta = new MenuItem("Pasta", 1800, 2);
-        Order order = new Order(pasta);
+        Order order = new Order(pasta, 1800, 1);
         check("new order is PLACED", order.getStatus() == OrderStatus.PLACED);
         expectRejected("a PLACED order cannot be served", order::markServed);
         order.advancePreparation();
@@ -72,7 +72,7 @@ public final class GameTests {
         check("served then paid: PAID", order.getStatus() == OrderStatus.PAID);
         expectRejected("a PAID order cannot be cancelled", order::cancel);
 
-        Order burger = new Order(new MenuItem("Burger", 1500, 1));
+        Order burger = new Order(new MenuItem("Burger", 1500, 1), 1500, 1);
         burger.advancePreparation();
         check("a 1-unit dish goes PLACED to READY", burger.isReady());
     }
@@ -84,7 +84,7 @@ public final class GameTests {
         waiting.markSeated();
         waiting.reduceSatisfaction();
         check("seated customer loses 8", waiting.getSatisfaction() == 84);
-        waiting.assignOrder(new Order(new MenuItem("Burger", 1500, 1)));
+        waiting.assignOrder(new Order(new MenuItem("Burger", 1500, 1), 1500, 1));
         waiting.reduceSatisfaction();
         check("customer with a placed order still loses 8", waiting.getSatisfaction() == 76);
         waiting.markServed(5);
@@ -103,7 +103,7 @@ public final class GameTests {
     private static void customerTurnGuardsDelayEatingAndPayment() {
         Customer customer = new RegularCustomer(1);
         customer.markSeated();
-        customer.assignOrder(new Order(new MenuItem("Burger", 1500, 1)));
+        customer.assignOrder(new Order(new MenuItem("Burger", 1500, 1), 1500, 1));
         customer.markServed(4);
         check("cannot finish eating on the serving turn", !customer.canFinishEating(4));
         check("can finish eating a turn later", customer.canFinishEating(5));
@@ -139,7 +139,7 @@ public final class GameTests {
         restaurant.getWaitingQueue().remove(customer);
         expectRejected("the Cashier cannot charge a seated customer",
                 () -> restaurant.getCashier().processPayment(customer, restaurant));
-        restaurant.getWaiter().takeOrder(customer, customer.chooseMenuItem(restaurant.getMenu()));
+        restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), 2);
         restaurant.getChef().prepare(customer.getOrder());
         restaurant.getWaiter().serveOrder(customer, 3);
         customer.markReadyToPay(4);
@@ -162,7 +162,7 @@ public final class GameTests {
         Table table = restaurant.findAvailableTable();
         restaurant.getWaiter().seatCustomer(seated, table);
         restaurant.getWaitingQueue().remove(seated);
-        restaurant.getWaiter().takeOrder(seated, seated.chooseMenuItem(restaurant.getMenu()));
+        restaurant.getWaiter().takeOrder(seated, restaurant.getMenu(), 2);
         restaurant.handleAbandonment(seated);
         check("abandoned customer is ABANDONED", seated.getStatus() == CustomerStatus.ABANDONED);
         check("abandoned customer's order is CANCELLED", seated.getOrder().getStatus() == OrderStatus.CANCELLED);

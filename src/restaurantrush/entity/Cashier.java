@@ -9,7 +9,7 @@ public class Cashier {
             throw new IllegalStateException("Customer #" + customer.getId() + " is " + customer.getStatus()
                     + "; the Cashier can only charge a READY_TO_PAY customer");
         }
-        restaurant.recordPayment(order.getPriceCents());
+        restaurant.recordPayment(order.getBillCents());
         customer.markPaid();
         order.markPaid();
         restaurant.releaseTableOf(customer);

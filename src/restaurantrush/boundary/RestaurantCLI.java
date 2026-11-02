@@ -151,7 +151,7 @@ public class RestaurantCLI {
         }
         return order.getItem().getName() + " " + order.getCompletedUnits() + "/"
                 + order.getItem().getPreparationUnits() + " units, " + order.getStatus()
-                + ", " + Money.format(order.getPriceCents());
+                + ", " + Money.format(order.getBillCents());
     }
 
     private static String waiterTasksText(Restaurant restaurant) {

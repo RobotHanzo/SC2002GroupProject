@@ -19,12 +19,20 @@ public class Waiter {
         customer.markSeated();
     }
 
-    public void takeOrder(Customer customer, MenuItem item) {
+    /**
+     * The customer chooses the dish and works out their own bill (a VIP gets a discount); the bill is
+     * locked in the new Order.
+     */
+    public Order takeOrder(Customer customer, Menu menu, int currentTurn) {
         if (customer.getStatus() != CustomerStatus.SEATED) {
             throw new IllegalStateException("Customer #" + customer.getId() + " is " + customer.getStatus()
                     + "; only a seated customer can order");
         }
-        customer.assignOrder(new Order(item));
+        MenuItem item = customer.chooseMenuItem(menu);
+        int billCents = customer.calculateBillCents(item.getPriceCents());
+        Order order = new Order(item, billCents, currentTurn);
+        customer.assignOrder(order);
+        return order;
     }
 
     public void serveOrder(Customer customer, int currentTurn) {
@@ -40,5 +48,6 @@ public class Waiter {
         }
         order.markServed();
         customer.markServed(currentTurn);
+        customer.onServed(currentTurn - order.getTurnTaken());
     }
 }
