@@ -29,10 +29,11 @@ public class Restaurant {
         for (int id = 1; id <= TABLE_COUNT; id++) {
             tables.add(new Table(id));
         }
-        menu = new Menu(List.of(
-                new MenuItem("Salad", 900, 1),
-                new MenuItem("Burger", 1500, 1),
-                new MenuItem("Pasta", 1800, 2)));
+        MenuItem salad = new MenuItem("Salad", 900, 1);
+        MenuItem burger = new MenuItem("Burger", 1500, 1);
+        MenuItem pasta = new MenuItem("Pasta", 1800, 2);
+        // The combos are registered once here; customers pick from the whole menu.
+        menu = new Menu(List.of(salad, burger, pasta, new ComboMeal(salad, burger), new ComboMeal(salad, pasta)));
     }
 
     /** A newly arrived customer joins the back of the waiting queue. */
