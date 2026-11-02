@@ -56,13 +56,7 @@ end note
 
 M -> cli : start game
 cli -> game : startGame()
-game -> rest : hh = getHappyHour()
-game -> rest : menu = getMenu()
-game -> rest : waiter = getWaiter()
-game -> rest : chef = getChef()
-game -> rest : cashier = getCashier()
-game -> rest : host = getHost()
-note right of game : GameController holds only restaurant;\nit reaches HappyHour, Menu and staff\nthrough the Restaurant getters
+note right of game : GameController holds only the restaurant. Whenever it needs the\nHappyHour, the Menu or a staff member it takes it from the Restaurant\ngetter (getHappyHour(), getMenu(), getWaiter() ...); those calls are not drawn
 
 loop for each turn 1..18 (turns 1-5 shown)
 
@@ -121,7 +115,9 @@ loop for each turn 1..18 (turns 1-5 shown)
     game -> waiter : seatCustomer(vip, t1)
     waiter -> t1 : seat(vip)
     waiter -> vip : markSeated()
-    note right : WAITING to SEATED;\nvip leaves waitingQueue
+    note right : WAITING to SEATED
+    game -> rest : getWaitingQueue().remove(vip)
+    note right : vip leaves the waitingQueue
   end
   note over game, cli : Chef: manager picks WAIT (no order exists yet)
 
@@ -234,25 +230,33 @@ loop for each turn 1..18 (turns 1-5 shown)
   opt hostChoice == SEAT
     game -> rest : t2 = findAvailableTable()
     game -> host : seatCustomer(c2, t2)
-    note right : same steps as turn 1 (Table.seat, markSeated):\nseated without using the Waiter's task
+    note right : Host.seatCustomer(c2, t2): markSeated() and Table.seat(c2), then\nc2 leaves the waitingQueue. The Waiter's task is not used
   end
   note over game, cli : Waiter and Chef: manager picks WAIT
 
   game -> game : **4 Eating and payment** coordinatePaymentProcessing()
   game -> rest : customers = getCustomers()
-  opt vip is SERVED and 4 > vip.getServedTurn() (3)
-    game -> vip : markReadyToPay(4)
-    note right : SERVED to READY_TO_PAY, readyTurn = 4
+  loop for each customer (the vip is shown)
+    game -> vip : eaten = canFinishEating(4)
+    opt eaten (SERVED and 4 > servedTurn 3)
+      game -> vip : markReadyToPay(4)
+      note right : SERVED to READY_TO_PAY, readyTurn = 4
+    end
   end
-  note over game, cashier : Cashier does not charge yet:\n4 > vip.getReadyTurn() (4) is false
+  game -> rest : payer = findOldestEligiblePayer(4)
+  rest -> vip : canPay(4)
+  note over game, cashier : false (4 > readyTurn 4 does not hold), so payer is null\nand the Cashier does not charge yet
   note over game, rest : **5** customer 2 is seated and unserved, so it loses its per-turn loss;\nthe VIP (READY_TO_PAY) loses nothing
 
   == Turn 5: Cashier collects the locked bill ==
 
   note over game, cli : Host: WAIT. Waiter takes customer 2's order and the Chef starts it\n(not traced further: this trace follows the VIP)
   game -> game : **4 Eating and payment** coordinatePaymentProcessing()
-  game -> rest : customers = getCustomers()
-  opt oldest READY_TO_PAY customer is vip and 5 > vip.getReadyTurn() (4)
+  note over game, rest : nobody is SERVED, so nobody new finishes eating
+  game -> rest : payer = findOldestEligiblePayer(5)
+  rest -> vip : canPay(5)
+  note over game, cashier : true (5 > readyTurn 4): payer is the vip
+  opt payer is not null
     game -> cashier : processPayment(vip, restaurant)
     cashier -> vip : order = getOrder()
     cashier -> order : bill = getBillCents()

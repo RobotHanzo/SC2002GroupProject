@@ -31,11 +31,15 @@ hide circle
 ' ---------- boundary and control ----------
 class RestaurantCLI <<boundary>> #FAE8A6 {
   -controller: GameController
+  -input: Scanner
+  -out: PrintStream
+  +start(): void
   +readWaiterChoice(): String
   +readChefChoice(): String
   +readHostChoice(): String
   +readHappyHourChoice(): boolean
   +displayTurnStatus(Restaurant): void
+  +displayMessage(String): void
   +displayError(String): void
   +displayResult(boolean, Restaurant): void
 }
@@ -47,6 +51,8 @@ class GameController <<control>> #FAE8A6 {
   -maxTurns: int
   -cli: RestaurantCLI
   +startGame(): void
+  +getCurrentTurn(): int
+  +getMaxTurns(): int
   -executeTurn(): void
   -processHappyHourActivation(): void
   -applyHappyHourRecovery(): void
@@ -61,6 +67,7 @@ class GameController <<control>> #FAE8A6 {
 class ArrivalSchedule {
   -arrivalTurns: int[]
   -nextCustomerId: int
+  -customerTypes: List<IntFunction<Customer>>
   +isArrivalTurn(turn: int): boolean
   +createArrival(turn: int): Customer
 }
@@ -79,6 +86,7 @@ class Restaurant #FAE8A6 {
   -revenueCents: int
   +registerArrival(Customer): void
   +findAvailableTable(): Table
+  +findOldestEligiblePayer(turn: int): Customer
   +getMenu(): Menu
   +getHappyHour(): HappyHour
   +getWaiter(): Waiter
@@ -90,6 +98,7 @@ class Restaurant #FAE8A6 {
   +recordPayment(amountCents: int): void
   +releaseTableOf(Customer): void
   +getPaidCustomerCount(): int
+  +getServedCustomerCount(): int
   +getAverageSatisfaction(): double
   +getRevenueCents(): int
   +handleAbandonment(Customer): void
@@ -188,10 +197,10 @@ abstract class Customer #FAE8A6 {
   +getOrder(): Order
   +markSeated(): void
   +markServed(turn: int): void
+  +canFinishEating(turn: int): boolean
   +markReadyToPay(turn: int): void
+  +canPay(turn: int): boolean
   +markPaid(): void
-  +getServedTurn(): int
-  +getReadyTurn(): int
   +shouldAbandon(): boolean
   +markAbandoned(): void
 }
@@ -368,8 +377,8 @@ note left of Customer
   satisfaction is private; subclasses change it only
   through adjustSatisfaction() (clamped 0..100).
   <b>TURN GUARDS</b>
-  Eats only if currentTurn > servedTurn;
-  pays only if currentTurn > readyTurn.
+  canFinishEating(turn): only after the serving turn.
+  canPay(turn): only after the READY_TO_PAY turn.
 end note
 
 note right of Waiter
@@ -392,7 +401,8 @@ note right of CriticCustomer
   Loses 12 per waiting turn. Always orders the most
   expensive menu item (Salad + Pasta, $24.30, 3 units).
   Served more than 2 turns after ordering: loses an
-  extra 10 (onServed).
+  extra 10 (onServed). A 3-unit combo cannot be served
+  that fast, so this Critic always loses the extra 10.
 end note
 
 note bottom of ComboMeal
@@ -416,10 +426,12 @@ legend left
   <back:#FAE8A6>  yellow  </back> changed since Stage 2
   <back:#DCEBF7>  blue  </back> unchanged
   <b>Changed since Stage 2</b> (nothing removed)
-  Customer: + recoverSatisfaction(), isAwaitingService()
+  Customer: + recoverSatisfaction(); isAwaitingService()
+    is now public
   Waiter: takeOrder(...) also takes HappyHour
-  MenuItem: public constructor (ComboMeal calls super)
-  Restaurant: + host, happyHour and their getters
+  MenuItem: no longer final (ComboMeal extends it)
+  Restaurant: + host, happyHour and their getters; the
+    menu now holds two ComboMeals
   GameController, RestaurantCLI: Host and Happy Hour steps
 end legend
 @enduml
