@@ -1,46 +1,65 @@
 @startuml
-title Restaurant Rush - Stage 2 Class Diagram
-top to bottom direction
+' ======================================================================
+' SC2002 Restaurant Rush - Stage 2 class diagram (source of truth)
+' Colour key: green = new in Stage 2, yellow = changed since Stage 1, blue = unchanged
+' Render: see docs/diagrams/README.md
+' ======================================================================
+!pragma layout smetana
+title Restaurant Rush: Stage 2 class diagram
+
 skinparam shadowing false
 skinparam classAttributeIconSize 0
-skinparam linetype ortho
-skinparam nodesep 35
-skinparam ranksep 45
-skinparam packageStyle rectangle
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 12
+skinparam nodesep 28
+skinparam ranksep 38
+skinparam linetype polyline
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #F6F7F2
+skinparam noteBorderColor #8C8C80
+skinparam noteFontSize 11
+skinparam class {
+  BorderColor #3F6B96
+  BackgroundColor #DCEBF7
+}
+skinparam stereotypeCBackgroundColor transparent
 hide empty members
+hide circle
 
-class RestaurantCLI {
+' ---------- boundary and control ----------
+class RestaurantCLI <<boundary>> {
   -controller: GameController
-  +readWaiterChoice() String
-  +readChefChoice() String
-  +displayTurnStatus(Restaurant) void
-  +displayError(String) void
-  +displayResult(boolean, Restaurant) void
+  +readWaiterChoice(): String
+  +readChefChoice(): String
+  +displayTurnStatus(Restaurant): void
+  +displayError(String): void
+  +displayResult(boolean, Restaurant): void
 }
 
-class GameController #f7eab8 {
+class GameController <<control>> #FAE8A6 {
   -restaurant: Restaurant
   -schedule: ArrivalSchedule
   -currentTurn: int
   -maxTurns: int
   -cli: RestaurantCLI
-  +startGame() void
-  -executeTurn() void
-  -processScheduledArrival() void
-  -coordinateStaffActions() void
-  -coordinatePaymentProcessing() void
-  -processEndOfTurnUpdates() void
-  -evaluateGameResult() boolean
+  +startGame(): void
+  -executeTurn(): void
+  -processScheduledArrival(): void
+  -coordinateStaffActions(): void
+  -coordinatePaymentProcessing(): void
+  -processEndOfTurnUpdates(): void
+  -evaluateGameResult(): boolean
 }
 
-class ArrivalSchedule #d6efdc {
+class ArrivalSchedule #CCEBD2 {
   -arrivalTurns: int[]
   -nextCustomerId: int
-  +isArrivalTurn(turn: int) boolean
-  +createArrival(turn: int) Customer
+  +isArrivalTurn(turn: int): boolean
+  +createArrival(turn: int): Customer
 }
 
-class Restaurant #f7eab8 {
+' ---------- restaurant and menu ----------
+class Restaurant #FAE8A6 {
   -tables: List<Table>
   -customers: List<Customer>
   -waitingQueue: Queue<Customer>
@@ -49,102 +68,107 @@ class Restaurant #f7eab8 {
   -chef: Chef
   -cashier: Cashier
   -revenueCents: int
-  +registerArrival(Customer) void
-  +findAvailableTable() Table
-  +getMenu() Menu
-  +getWaiter() Waiter
-  +getChef() Chef
-  +getCashier() Cashier
-  +recordPayment(amountCents: int) void
-  +releaseTableOf(Customer) void
-  +getPaidCustomerCount() int
-  +getAverageSatisfaction() double
-  +getRevenueCents() int
-  +handleAbandonment(Customer) void
-  +getUnhappyDepartureCount() int
+  +registerArrival(Customer): void
+  +findAvailableTable(): Table
+  +getMenu(): Menu
+  +getWaiter(), getChef(), getCashier()
+  +recordPayment(amountCents: int): void
+  +releaseTableOf(Customer): void
+  +getPaidCustomerCount(): int
+  +getAverageSatisfaction(): double
+  +getRevenueCents(): int
+  +handleAbandonment(Customer): void
+  +getUnhappyDepartureCount(): int
 }
 
-class Menu #d6efdc {
+class Menu #CCEBD2 {
   -items: List<MenuItem>
-  +getItems() List<MenuItem>
-  +getItem(index: int) MenuItem
-  +size() int
-  +getMostExpensive() MenuItem
+  +getItems(): List<MenuItem>
+  +getItem(index: int): MenuItem
+  +size(): int
+  +getMostExpensive(): MenuItem
 }
 
-class Waiter #f7eab8 {
-  +seatCustomer(Customer, Table) void
-  +takeOrder(Customer, Menu, currentTurn: int) Order
-  +serveOrder(Customer, currentTurn: int) void
+class MenuItem {
+  -name: String
+  -priceCents: int
+  -preparationUnits: int
+  +getName(): String
+  +getPriceCents(): int
+  +getPreparationUnits(): int
+}
+
+' ---------- staff and table ----------
+class Waiter #FAE8A6 {
+  +seatCustomer(Customer, Table): void
+  +takeOrder(Customer, Menu, currentTurn: int): Order
+  +serveOrder(Customer, currentTurn: int): void
 }
 
 class Chef {
-  +prepare(Order) void
+  +prepare(Order): void
 }
 
 class Cashier {
-  +processPayment(Customer, Restaurant) void
+  +processPayment(Customer, Restaurant): void
 }
 
 class Table {
   -tableId: int
   -occupant: Customer
-  +isAvailable() boolean
-  +seat(Customer) void
-  +release() void
-  +getOccupant() Customer
+  +isAvailable(): boolean
+  +seat(Customer): void
+  +release(): void
+  +getOccupied(): Customer
 }
 
-abstract class Customer #f7eab8 {
+' ---------- customers ----------
+abstract class Customer #FAE8A6 {
   -customerId: int
-  #satisfaction: int
+  -satisfaction: int
   -status: CustomerStatus
   -order: Order
   -servedTurn: int
   -readyTurn: int
-  +getId() int
-  +getStatus() CustomerStatus
-  +getSatisfaction() int
-  {abstract} +getTypeLabel() : String
-  +chooseMenuItem(Menu) MenuItem
-  +calculateBillCents(basePriceCents: int) int
-  {abstract} #getSatisfactionLoss() : int
-  #adjustSatisfaction(delta: int) void
-  +reduceSatisfaction() void
-  +onServed(turnsWaited: int) void
-  +assignOrder(Order) void
-  +markSeated() void
-  +getOrder() Order
-  +markServed(turn: int) void
-  +markReadyToPay(turn: int) void
-  +getServedTurn() int
-  +getReadyTurn() int
-  +markPaid() void
-  +shouldAbandon() boolean
-  +markAbandoned() void
+  +getId(), getStatus(), getSatisfaction()
+  {abstract} +getTypeLabel(): String
+  +chooseMenuItem(Menu): MenuItem
+  +calculateBillCents(basePriceCents: int): int
+  {abstract} #getSatisfactionLoss(): int
+  #adjustSatisfaction(delta: int): void
+  +reduceSatisfaction(): void
+  +onServed(turnsWaited: int): void
+  +assignOrder(Order): void
+  +getOrder(): Order
+  +markSeated(), markPaid(): void
+  +markServed(turn: int): void
+  +markReadyToPay(turn: int): void
+  +getServedTurn(), getReadyTurn(): int
+  +shouldAbandon(): boolean
+  +markAbandoned(): void
 }
 
-class RegularCustomer #d6efdc {
-  +getTypeLabel() String
-  #getSatisfactionLoss() int
+class RegularCustomer #CCEBD2 {
+  +getTypeLabel(): String
+  #getSatisfactionLoss(): int
 }
 
-class VIPCustomer #d6efdc {
-  +getTypeLabel() String
-  #getSatisfactionLoss() int
-  +calculateBillCents(basePriceCents: int) int
+class VIPCustomer #CCEBD2 {
+  +getTypeLabel(): String
+  #getSatisfactionLoss(): int
+  +calculateBillCents(basePriceCents: int): int
 }
 
-class CriticCustomer #d6efdc {
-  -LATE_SERVICE_TURNS: int
-  -LATE_PENALTY: int
-  +getTypeLabel() String
-  #getSatisfactionLoss() int
-  +chooseMenuItem(Menu) MenuItem
-  +onServed(turnsWaited: int) void
+class CriticCustomer #CCEBD2 {
+  {static} -LATE_SERVICE_TURNS: int = 2
+  {static} -LATE_PENALTY: int = 10
+  +getTypeLabel(): String
+  #getSatisfactionLoss(): int
+  +chooseMenuItem(Menu): MenuItem
+  +onServed(turnsWaited: int): void
 }
 
-class Order #f7eab8 {
+class Order #FAE8A6 {
   -orderId: int
   -item: MenuItem
   -completedUnits: int
@@ -152,26 +176,16 @@ class Order #f7eab8 {
   -billCents: int
   -turnTaken: int
   +Order(item: MenuItem, billCents: int, turnTaken: int)
-  +advancePreparation() void
-  +isReady() boolean
-  +markServed() void
-  +markPaid() void
-  +cancel() void
-  +getStatus() OrderStatus
-  +getBillCents() int
-  +getTurnTaken() int
+  +advancePreparation(): void
+  +isReady(): boolean
+  +markServed(): void
+  +markPaid(): void
+  +cancel(): void
+  +getStatus(): OrderStatus
+  +getBillCents(), getTurnTaken(): int
 }
 
-class MenuItem {
-  -name: String
-  -priceCents: int
-  -preparationUnits: int
-  +getName() String
-  +getPriceCents() int
-  +getPreparationUnits() int
-}
-
-enum CustomerStatus {
+enum CustomerStatus #EAF1F7 {
   WAITING
   SEATED
   ORDERED
@@ -181,7 +195,7 @@ enum CustomerStatus {
   ABANDONED
 }
 
-enum OrderStatus {
+enum OrderStatus #EAF1F7 {
   PLACED
   PREPARING
   READY
@@ -190,42 +204,131 @@ enum OrderStatus {
   CANCELLED
 }
 
-' Association and inheritance relationships
-RestaurantCLI "1" -- "1" GameController : uses
-GameController "1" --> "1" Restaurant : coordinates
-GameController "1" --> "1" ArrivalSchedule : asks for arrivals
-ArrivalSchedule ..> Customer : creates
-Restaurant "1" *-- "2" Table : contains
-Restaurant "1" *-- "1" Menu : offers
-Menu "1" o-- "3" MenuItem : lists
-Restaurant "1" o-- "0..*" Customer : tracks
-Restaurant "1" -- "1" Waiter : employs
-Restaurant "1" -- "1" Chef : employs
-Restaurant "1" -- "1" Cashier : employs
-Table "1" -- "0..1" Customer : occupied by
-Customer "1" -- "0..1" Order : places
-Order "0..*" --> "1" MenuItem : selects
-Customer <|-- RegularCustomer
-Customer <|-- VIPCustomer
-Customer <|-- CriticCustomer
-Customer --> CustomerStatus
-Order --> OrderStatus
-Waiter ..> Table : seats
-Waiter ..> Customer : serves
-Waiter ..> Order : creates / serves
-Chef ..> Order : prepares
-Cashier ..> Customer : processes payment
+' ---------- layout skeleton (hidden links keep the rows tidy) ----------
+' Smetana cannot route labelled same-rank links, so sideways links carry end roles instead of labels.
+RestaurantCLI -[hidden]right- GameController
+Table -[hidden]right- Waiter
+Waiter -[hidden]right- Chef
+Chef -[hidden]right- Cashier
+Cashier -[hidden]right- Menu
+Customer -[hidden]right- Order
+Order -[hidden]right- MenuItem
+RegularCustomer -[hidden]right- VIPCustomer
+VIPCustomer -[hidden]right- CriticCustomer
+CriticCustomer -[hidden]right- CustomerStatus
 
-note right of Customer
-  Customer types are polymorphic. Regular/VIP/Critic waiting loss: 8/5/12. Satisfaction is clamped to 0..100.
+' ---------- control and boundary ----------
+RestaurantCLI "cli 1" <-right-> "controller 1" GameController
+GameController "1" -right-> "schedule 1" ArrivalSchedule
+GameController "1" -down-> "restaurant 1" Restaurant
+RestaurantCLI .down.> Restaurant : displays
+ArrivalSchedule .down.> Customer : <<create>>
+
+' ---------- composition (Restaurant owns these) ----------
+Restaurant "1" *-down- "2" Table : tables
+Restaurant "1" *-down- "1" Waiter : waiter
+Restaurant "1" *-down- "1" Chef : chef
+Restaurant "1" *-down- "1" Cashier : cashier
+Restaurant "1" *-down- "1" Menu : menu
+
+' ---------- aggregation (customers arrive and leave) ----------
+Restaurant "1" o-down- "customers 0..*" Customer
+Restaurant "1" o-down- "0..*" Customer : waitingQueue\n{ordered, FIFO}
+
+' ---------- menu ----------
+Menu "1" o-down- "3" MenuItem : items
+
+' ---------- domain associations ----------
+Table "1" -down- "0..1" Customer : occupant
+Customer "1" -right-> "order 0..1" Order
+Order "0..*" -right-> "item 1" MenuItem
+Customer -down-> CustomerStatus : status
+Order -down-> OrderStatus : status
+Customer <|-down- RegularCustomer
+Customer <|-down- VIPCustomer
+Customer <|-down- CriticCustomer
+
+' ---------- dependencies ----------
+Waiter .left.> Table
+Waiter .down.> Customer : seats / serves
+Waiter .down.> Order : <<create>>
+Chef .down.> Order : advances
+Cashier .down.> Customer : charges
+Cashier .up.> Restaurant : recordPayment,\nreleaseTableOf
+
+' ---------- annotations ----------
+note top of Restaurant
+  <b>COMPOSITION</b>
+  Restaurant creates and owns its Tables, Menu and
+  staff; they exist only as part of one Restaurant.
+  Customers are aggregated: they arrive and leave.
+  The waitingQueue and customers links both point
+  at Customer.
 end note
 
-note right of Order
-  Bill is fixed when order is created. Legal transitions: PLACED to PREPARING to READY to SERVED to PAID; cancellation before service.
+note bottom of Order
+  <b>ENCAPSULATION</b>
+  status is private and changes only through
+  advancePreparation(), markServed(), markPaid(),
+  cancel(); illegal transitions are rejected.
+  Legal: PLACED → PREPARING → READY → SERVED → PAID
+  (PLACED → READY directly for a 1-unit dish);
+  PLACED / PREPARING / READY → CANCELLED if the
+  customer leaves.
+  billCents is set once in the constructor with no
+  setter: the price is locked when ordered.
+end note
+
+note bottom of CustomerStatus
+  <b>CUSTOMER LIFECYCLE</b>
+  WAITING → SEATED → ORDERED → SERVED →
+  READY_TO_PAY → PAID; WAITING / SEATED / ORDERED
+  → ABANDONED when satisfaction reaches 0.
+  Served, eating and READY_TO_PAY customers
+  lose no satisfaction.
+end note
+
+note left of Customer
+  <b>POLYMORPHISM</b>
+  getSatisfactionLoss(), calculateBillCents(),
+  chooseMenuItem() and onServed() are overridden.
+  GameController and Waiter call them on Customer
+  and never check the type.
+  Loss per waiting turn: Regular 8, VIP 5, Critic 12.
+  <b>ENCAPSULATION</b>
+  satisfaction is private; subclasses change it only
+  through adjustSatisfaction() (clamped 0..100).
+  <b>TURN GUARDS</b>
+  Eats only if currentTurn > servedTurn;
+  pays only if currentTurn > readyTurn.
+end note
+
+note left of Table
+  <b>BILLING</b>
+  bill = customer.calculateBillCents(price),
+  stored in the new Order (VIP pays 90%).
 end note
 
 note right of CriticCustomer
-  Chooses the most expensive item on Menu and receives extra late-service penalty when served after 2 turns.
+  <b>CRITIC RULE</b>
+  Loses 12 per waiting turn. Always orders the most
+  expensive menu item (Pasta, $18.00). Served more
+  than 2 turns after ordering: loses an extra 10
+  (onServed).
 end note
 
+note left of RegularCustomer #E8E8E8
+  <b>KEY</b>
+  <back:#CCEBD2>  green  </back> new in Stage 2
+  <back:#FAE8A6>  yellow  </back> changed since Stage 1
+  <back:#DCEBF7>  blue  </back> unchanged
+  <b>Changed since Stage 1</b>
+  Customer: abstract; chooseMenuItem() to chooseMenuItem(Menu);
+    + loss, billing and onServed hooks
+  Order: getPriceCents() to getBillCents(); + billCents, turnTaken
+  Waiter: takeOrder(Customer, MenuItem) to
+    takeOrder(Customer, Menu, turn): Order; serveOrder + turn
+  Restaurant: registerArrival() to registerArrival(Customer); + menu
+  GameController: + schedule
+end note
 @enduml
