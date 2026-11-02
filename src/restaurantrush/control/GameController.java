@@ -222,6 +222,9 @@ public class GameController {
     /** Step 5: customers who are still waiting lose satisfaction; at 0 they leave without paying. */
     private void processEndOfTurnUpdates() {
         for (Customer customer : restaurant.getCustomers()) {
+            if (!customer.isAwaitingService()) {
+                continue;
+            }
             customer.reduceSatisfaction();
             if (customer.shouldAbandon()) {
                 restaurant.handleAbandonment(customer);
