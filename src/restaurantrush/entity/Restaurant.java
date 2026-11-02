@@ -20,16 +20,17 @@ public class Restaurant {
     private final Waiter waiter = new Waiter();
     private final Chef chef = new Chef();
     private final Cashier cashier = new Cashier();
-    private final List<MenuItem> menuItems = new ArrayList<>();
+    private final Menu menu;
     private int revenueCents;
 
     public Restaurant() {
         for (int id = 1; id <= TABLE_COUNT; id++) {
             tables.add(new Table(id));
         }
-        menuItems.add(new MenuItem("Salad", 900, 1));
-        menuItems.add(new MenuItem("Burger", 1500, 1));
-        menuItems.add(new MenuItem("Pasta", 1800, 2));
+        menu = new Menu(List.of(
+                new MenuItem("Salad", 900, 1),
+                new MenuItem("Burger", 1500, 1),
+                new MenuItem("Pasta", 1800, 2)));
     }
 
     /** A new regular customer joins the back of the waiting queue. */
@@ -76,8 +77,8 @@ public class Restaurant {
         return Collections.unmodifiableList(tables);
     }
 
-    public List<MenuItem> getMenuItems() {
-        return Collections.unmodifiableList(menuItems);
+    public Menu getMenu() {
+        return menu;
     }
 
     public List<Customer> getCustomers() {

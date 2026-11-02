@@ -48,7 +48,7 @@ public final class GameTests {
     // ---- entity checks -------------------------------------------------------------------
 
     private static void menuMatchesTheBrief() {
-        List<MenuItem> menu = new Restaurant().getMenuItems();
+        List<MenuItem> menu = new Restaurant().getMenu().getItems();
         check("menu has three items", menu.size() == 3);
         check("Salad $9.00, 1 unit", item(menu, "Salad", 900, 1));
         check("Burger $15.00, 1 unit", item(menu, "Burger", 1500, 1));
@@ -112,7 +112,7 @@ public final class GameTests {
     }
 
     private static void customerChoosesFoodByIdRule() {
-        List<MenuItem> menu = new Restaurant().getMenuItems();
+        List<MenuItem> menu = new Restaurant().getMenu().getItems();
         check("customer 1 picks Burger", new Customer(1).chooseMenuItem(menu).getName().equals("Burger"));
         check("customer 2 picks Pasta", new Customer(2).chooseMenuItem(menu).getName().equals("Pasta"));
         check("customer 3 picks Salad", new Customer(3).chooseMenuItem(menu).getName().equals("Salad"));
@@ -136,7 +136,7 @@ public final class GameTests {
         restaurant.getWaitingQueue().remove(customer);
         expectRejected("the Cashier cannot charge a seated customer",
                 () -> restaurant.getCashier().processPayment(customer, restaurant));
-        restaurant.getWaiter().takeOrder(customer, customer.chooseMenuItem(restaurant.getMenuItems()));
+        restaurant.getWaiter().takeOrder(customer, customer.chooseMenuItem(restaurant.getMenu().getItems()));
         restaurant.getChef().prepare(customer.getOrder());
         restaurant.getWaiter().serveOrder(customer, 3);
         customer.markReadyToPay(4);
@@ -157,7 +157,7 @@ public final class GameTests {
         Table table = restaurant.findAvailableTable();
         restaurant.getWaiter().seatCustomer(seated, table);
         restaurant.getWaitingQueue().remove(seated);
-        restaurant.getWaiter().takeOrder(seated, seated.chooseMenuItem(restaurant.getMenuItems()));
+        restaurant.getWaiter().takeOrder(seated, seated.chooseMenuItem(restaurant.getMenu().getItems()));
         restaurant.handleAbandonment(seated);
         check("abandoned customer is ABANDONED", seated.getStatus() == CustomerStatus.ABANDONED);
         check("abandoned customer's order is CANCELLED", seated.getOrder().getStatus() == OrderStatus.CANCELLED);

@@ -129,7 +129,7 @@ public class GameController {
     private void takeOrder(Command command) {
         Customer customer = select(command, customersWithStatus(CustomerStatus.SEATED),
                 "no seated customer is waiting to order", "only a seated customer can order");
-        MenuItem item = customer.chooseMenuItem(restaurant.getMenuItems());
+        MenuItem item = customer.chooseMenuItem(restaurant.getMenu().getItems());
         restaurant.getWaiter().takeOrder(customer, item);
         cli.displayMessage("Waiter takes Customer #" + customer.getId() + "'s order. They choose "
                 + item.getName() + " (" + Money.format(item.getPriceCents()) + ", "
