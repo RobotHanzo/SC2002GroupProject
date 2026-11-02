@@ -30,9 +30,13 @@ hide circle
 ' ---------- boundary and control ----------
 class RestaurantCLI <<boundary>> {
   -controller: GameController
+  -input: Scanner
+  -out: PrintStream
+  +start(): void
   +readWaiterChoice(): String
   +readChefChoice(): String
   +displayTurnStatus(Restaurant): void
+  +displayMessage(String): void
   +displayError(String): void
   +displayResult(boolean, Restaurant): void
 }
@@ -43,6 +47,8 @@ class GameController <<control>> {
   -maxTurns: int
   -cli: RestaurantCLI
   +startGame(): void
+  +getCurrentTurn(): int
+  +getMaxTurns(): int
   -executeTurn(): void
   -processScheduledArrival(): void
   -coordinateStaffActions(): void
@@ -61,7 +67,7 @@ class Restaurant {
   -cashier: Cashier
   -revenueCents: int
   -menuItems: List<MenuItem>
-  +registerArrival(): void
+  +registerArrival(): Customer
   +findAvailableTable(): Table
   +findOldestEligiblePayer(turn: int): Customer
   +getWaiter(): Waiter
@@ -70,9 +76,10 @@ class Restaurant {
   +getMenuItems(): List<MenuItem>
   +getCustomers(): List<Customer>
   +getWaitingQueue(): Queue<Customer>
-  +recordPayment(): void
+  +recordPayment(amountCents: int): void
   +releaseTableOf(customer: Customer): void
   +getPaidCustomerCount(): int
+  +getServedCustomerCount(): int
   +getAverageSatisfaction(): double
   +getRevenueCents(): int
   +handleAbandonment(Customer): void
@@ -92,7 +99,7 @@ class MenuItem {
 class Waiter {
   +seatCustomer(Customer, Table): void
   +takeOrder(Customer, MenuItem): void
-  +serveOrder(Customer): void
+  +serveOrder(Customer, currentTurn: int): void
 }
 
 class Chef {
@@ -123,7 +130,7 @@ class Customer {
   +getId(): int
   +getStatus(): CustomerStatus
   +getSatisfaction(): int
-  +chooseMenuItem(): MenuItem
+  +chooseMenuItem(List<MenuItem>): MenuItem
   +assignOrder(Order): void
   +getOrder(): Order
   +markSeated(): void
