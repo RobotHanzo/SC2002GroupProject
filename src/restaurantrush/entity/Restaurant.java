@@ -1,0 +1,157 @@
+package restaurantrush.entity;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
+/**
+ * The restaurant owns its tables, staff and menu (composition) and keeps the books: the waiting
+ * queue, every customer who has arrived, and the revenue. Customers are aggregated because they
+ * arrive and leave.
+ */
+public class Restaurant {
+    private static final int TABLE_COUNT = 2;
+
+    private final List<Table> tables = new ArrayList<>();
+    private final List<Customer> customers = new ArrayList<>();
+    private final Queue<Customer> waitingQueue = new LinkedList<>();
+    private final Waiter waiter = new Waiter();
+    private final Chef chef = new Chef();
+    private final Cashier cashier = new Cashier();
+    private final List<MenuItem> menuItems = new ArrayList<>();
+    private int revenueCents;
+
+    public Restaurant() {
+        for (int id = 1; id <= TABLE_COUNT; id++) {
+            tables.add(new Table(id));
+        }
+        menuItems.add(new MenuItem("Salad", 900, 1));
+        menuItems.add(new MenuItem("Burger", 1500, 1));
+        menuItems.add(new MenuItem("Pasta", 1800, 2));
+    }
+
+    /** A new regular customer joins the back of the waiting queue. */
+    public Customer registerArrival() {
+        Customer customer = new Customer(customers.size() + 1);
+        customers.add(customer);
+        waitingQueue.add(customer);
+        return customer;
+    }
+
+    /** The first free table, or null when both are occupied. */
+    public Table findAvailableTable() {
+        for (Table table : tables) {
+            if (table.isAvailable()) {
+                return table;
+            }
+        }
+        return null;
+    }
+
+    /** The READY_TO_PAY customer who arrived first and may be charged this turn, or null. */
+    public Customer findOldestEligiblePayer(int turn) {
+        for (Customer customer : customers) {
+            if (customer.canPay(turn)) {
+                return customer;
+            }
+        }
+        return null;
+    }
+
+    public Waiter getWaiter() {
+        return waiter;
+    }
+
+    public Chef getChef() {
+        return chef;
+    }
+
+    public Cashier getCashier() {
+        return cashier;
+    }
+
+    public List<Table> getTables() {
+        return Collections.unmodifiableList(tables);
+    }
+
+    public List<MenuItem> getMenuItems() {
+        return Collections.unmodifiableList(menuItems);
+    }
+
+    public List<Customer> getCustomers() {
+        return Collections.unmodifiableList(customers);
+    }
+
+    /** The live FIFO queue: the controller removes a customer from it once the customer is seated. */
+    public Queue<Customer> getWaitingQueue() {
+        return waitingQueue;
+    }
+
+    public void recordPayment(int amountCents) {
+        if (amountCents < 0) {
+            throw new IllegalArgumentException("A payment cannot be negative");
+        }
+        revenueCents += amountCents;
+    }
+
+    public void releaseTableOf(Customer customer) {
+        for (Table table : tables) {
+            if (table.getOccupied() == customer) {
+                table.release();
+            }
+        }
+    }
+
+    public int getPaidCustomerCount() {
+        return countWithStatus(CustomerStatus.PAID);
+    }
+
+    public int getServedCustomerCount() {
+        return countWithStatus(CustomerStatus.SERVED) + countWithStatus(CustomerStatus.READY_TO_PAY)
+                + countWithStatus(CustomerStatus.PAID);
+    }
+
+    /** Mean satisfaction of paid customers, as recorded when each paid; 0 when nobody has paid. */
+    public double getAverageSatisfaction() {
+        int total = 0;
+        int paid = 0;
+        for (Customer customer : customers) {
+            if (customer.getStatus() == CustomerStatus.PAID) {
+                total += customer.getSatisfaction();
+                paid++;
+            }
+        }
+        return paid == 0 ? 0.0 : (double) total / paid;
+    }
+
+    public int getRevenueCents() {
+        return revenueCents;
+    }
+
+    /** A customer whose satisfaction hit 0 leaves: cancel the unfinished order, free the table, leave the queue. */
+    public void handleAbandonment(Customer customer) {
+        customer.markAbandoned();
+        Order order = customer.getOrder();
+        if (order != null) {
+            order.cancel();
+        }
+        releaseTableOf(customer);
+        waitingQueue.remove(customer);
+    }
+
+    public int getUnhappyDepartureCount() {
+        return countWithStatus(CustomerStatus.ABANDONED);
+    }
+
+    private int countWithStatus(CustomerStatus status) {
+        int count = 0;
+        for (Customer customer : customers) {
+            if (customer.getStatus() == status) {
+                count++;
+            }
+        }
+        return count;
+    }
+}
