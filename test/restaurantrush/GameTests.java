@@ -156,7 +156,7 @@ public final class GameTests {
         restaurant.getWaitingQueue().remove(customer);
         expectRejected("the Cashier cannot charge a seated customer",
                 () -> restaurant.getCashier().processPayment(customer, restaurant));
-        restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), 2);
+        restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), restaurant.getHappyHour(), 2);
         restaurant.getChef().prepare(customer.getOrder());
         restaurant.getWaiter().serveOrder(customer, 3);
         customer.markReadyToPay(4);
@@ -179,7 +179,7 @@ public final class GameTests {
         Table table = restaurant.findAvailableTable();
         restaurant.getWaiter().seatCustomer(seated, table);
         restaurant.getWaitingQueue().remove(seated);
-        restaurant.getWaiter().takeOrder(seated, restaurant.getMenu(), 2);
+        restaurant.getWaiter().takeOrder(seated, restaurant.getMenu(), restaurant.getHappyHour(), 2);
         restaurant.handleAbandonment(seated);
         check("abandoned customer is ABANDONED", seated.getStatus() == CustomerStatus.ABANDONED);
         check("abandoned customer's order is CANCELLED", seated.getOrder().getStatus() == OrderStatus.CANCELLED);
@@ -228,7 +228,7 @@ public final class GameTests {
         restaurant.registerArrival(vip);
         restaurant.getWaiter().seatCustomer(vip, restaurant.findAvailableTable());
         restaurant.getWaitingQueue().remove(vip);
-        Order order = restaurant.getWaiter().takeOrder(vip, restaurant.getMenu(), 2);
+        Order order = restaurant.getWaiter().takeOrder(vip, restaurant.getMenu(), restaurant.getHappyHour(), 2);
         check("the VIP orders a Burger", order.getItem().getName().equals("Burger"));
         check("the order's bill is locked at $13.50", order.getBillCents() == 1350);
         check("the order remembers the turn it was taken", order.getTurnTaken() == 2);

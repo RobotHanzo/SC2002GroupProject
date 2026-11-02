@@ -65,6 +65,13 @@ public abstract class Customer {
         }
     }
 
+    /** Happy Hour: a customer who is still waiting for a table or food regains satisfaction (never above 100). */
+    public void recoverSatisfaction(int amount) {
+        if (isAwaitingService()) {
+            adjustSatisfaction(amount);
+        }
+    }
+
     public void assignOrder(Order newOrder) {
         require(CustomerStatus.SEATED);
         order = newOrder;
@@ -120,7 +127,8 @@ public abstract class Customer {
         status = CustomerStatus.ABANDONED;
     }
 
-    private boolean isAwaitingService() {
+    /** True while the customer is waiting for a table, to order, or for food (not yet served). */
+    public boolean isAwaitingService() {
         return status == CustomerStatus.WAITING || status == CustomerStatus.SEATED
                 || status == CustomerStatus.ORDERED;
     }

@@ -21,6 +21,7 @@ public class Restaurant {
     private final Chef chef = new Chef();
     private final Cashier cashier = new Cashier();
     private final Menu menu;
+    private final HappyHour happyHour = new HappyHour();
     private int revenueCents;
 
     public Restaurant() {
@@ -77,6 +78,10 @@ public class Restaurant {
 
     public Menu getMenu() {
         return menu;
+    }
+
+    public HappyHour getHappyHour() {
+        return happyHour;
     }
 
     public List<Customer> getCustomers() {

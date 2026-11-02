@@ -20,16 +20,16 @@ public class Waiter {
     }
 
     /**
-     * The customer chooses the dish and works out their own bill (a VIP gets a discount); the bill is
-     * locked in the new Order.
+     * The customer chooses the dish and works out their own bill (a VIP gets a discount); then the
+     * Happy Hour discount, if active, is applied on top. The bill is locked in the new Order.
      */
-    public Order takeOrder(Customer customer, Menu menu, int currentTurn) {
+    public Order takeOrder(Customer customer, Menu menu, HappyHour happyHour, int currentTurn) {
         if (customer.getStatus() != CustomerStatus.SEATED) {
             throw new IllegalStateException("Customer #" + customer.getId() + " is " + customer.getStatus()
                     + "; only a seated customer can order");
         }
         MenuItem item = customer.chooseMenuItem(menu);
-        int billCents = customer.calculateBillCents(item.getPriceCents());
+        int billCents = happyHour.applyDiscount(customer.calculateBillCents(item.getPriceCents()));
         Order order = new Order(item, billCents, currentTurn);
         customer.assignOrder(order);
         return order;

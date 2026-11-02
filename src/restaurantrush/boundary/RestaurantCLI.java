@@ -11,6 +11,7 @@ import java.util.Scanner;
 import restaurantrush.control.GameController;
 import restaurantrush.entity.Customer;
 import restaurantrush.entity.CustomerStatus;
+import restaurantrush.entity.HappyHour;
 import restaurantrush.entity.Money;
 import restaurantrush.entity.Order;
 import restaurantrush.entity.Restaurant;
@@ -36,7 +37,7 @@ public class RestaurantCLI {
     /** Runs one game. If the input ends before the game does, the run stops with a message. */
     public void start() {
         controller = new GameController(this);
-        out.println("SC2002 Restaurant Rush - Stage 2");
+        out.println("SC2002 Restaurant Rush - Stage 3");
         out.println("You manage a restaurant for " + controller.getMaxTurns() + " turns. Each turn the Waiter does one");
         out.println("task (SEAT, TAKE_ORDER or SERVE) and the Chef advances one order by one unit (COOK).");
         out.println("Press Enter to WAIT. Goal: at least " + GameController.REQUIRED_PAID_CUSTOMERS + " paid customers, revenue of at least "
@@ -58,6 +59,21 @@ public class RestaurantCLI {
         return readLine("Chef    [COOK <#> | WAIT]: ");
     }
 
+    /** Asks whether to switch Happy Hour on now. Blank means no. */
+    public boolean readHappyHourChoice() {
+        while (true) {
+            String answer = readLine("Happy Hour [y = switch on for this turn and the next | n or Enter = not now]: ")
+                    .trim().toLowerCase(Locale.ROOT);
+            if (answer.isEmpty() || answer.equals("n") || answer.equals("no")) {
+                return false;
+            }
+            if (answer.equals("y") || answer.equals("yes")) {
+                return true;
+            }
+            displayError("'" + answer + "' is not y or n");
+        }
+    }
+
     public void displayTurnStatus(Restaurant restaurant) {
         out.println();
         out.println("=================== TURN " + controller.getCurrentTurn() + " of " + controller.getMaxTurns()
@@ -66,6 +82,7 @@ public class RestaurantCLI {
                 + " | Average satisfaction of paid customers: " + averageText(restaurant)
                 + " | Served: " + restaurant.getServedCustomerCount()
                 + " | Unhappy departures: " + restaurant.getUnhappyDepartureCount());
+        out.println("Happy Hour: " + happyHourText(restaurant.getHappyHour()));
         out.println("Waiting queue: " + queueText(restaurant));
         out.println("Tables: " + tablesText(restaurant));
         out.println("Customers:");
@@ -120,6 +137,13 @@ public class RestaurantCLI {
             return "N/A";
         }
         return String.format(Locale.ROOT, "%.1f", restaurant.getAverageSatisfaction());
+    }
+
+    private static String happyHourText(HappyHour happyHour) {
+        if (happyHour.isActive()) {
+            return "ACTIVE, " + happyHour.getRemainingTurns() + " turn(s) left including this one";
+        }
+        return happyHour.isAvailable() ? "available (switch on once per game)" : "used";
     }
 
     private static String queueText(Restaurant restaurant) {

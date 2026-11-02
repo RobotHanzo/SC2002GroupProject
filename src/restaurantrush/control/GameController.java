@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import restaurantrush.boundary.RestaurantCLI;
 import restaurantrush.entity.Customer;
 import restaurantrush.entity.CustomerStatus;
+import restaurantrush.entity.HappyHour;
 import restaurantrush.entity.MenuItem;
 import restaurantrush.entity.Money;
 import restaurantrush.entity.Order;
@@ -62,6 +63,8 @@ public class GameController {
     private void executeTurn() {
         processScheduledArrival();
         cli.displayTurnStatus(restaurant);
+        processHappyHourActivation();
+        applyHappyHourRecovery();
         coordinateStaffActions();
         coordinatePaymentProcessing();
         processEndOfTurnUpdates();
@@ -72,6 +75,34 @@ public class GameController {
         if (schedule.isArrivalTurn(currentTurn)) {
             restaurant.registerArrival(schedule.createArrival(currentTurn));
         }
+    }
+
+    /** Start of turn: while Happy Hour is unused the manager may switch it on (once per game). */
+    private void processHappyHourActivation() {
+        HappyHour happyHour = restaurant.getHappyHour();
+        if (happyHour.isAvailable() && cli.readHappyHourChoice() && happyHour.activate()) {
+            cli.displayMessage("Happy Hour is ON: orders taken now get a discount and waiting customers recover "
+                    + "satisfaction. Turns left: " + happyHour.getRemainingTurns() + ".");
+        }
+    }
+
+    /** Start of an active Happy Hour turn: customers still waiting for a table or food recover satisfaction. */
+    private void applyHappyHourRecovery() {
+        HappyHour happyHour = restaurant.getHappyHour();
+        if (!happyHour.isActive()) {
+            return;
+        }
+        int amount = happyHour.getRecoveryAmount();
+        List<String> changes = new ArrayList<>();
+        for (Customer customer : restaurant.getCustomers()) {
+            if (customer.isAwaitingService()) {
+                int before = customer.getSatisfaction();
+                customer.recoverSatisfaction(amount);
+                changes.add("#" + customer.getId() + " " + before + " -> " + customer.getSatisfaction());
+            }
+        }
+        cli.displayMessage("Happy Hour (" + happyHour.getRemainingTurns() + " turn(s) left including this one): "
+                + (changes.isEmpty() ? "nobody is waiting." : "waiting customers recover " + String.join(", ", changes) + "."));
     }
 
     /** Steps 2 and 3: the Waiter acts first, then the Chef. A rejected choice does not use up the task. */
@@ -129,7 +160,7 @@ public class GameController {
     private void takeOrder(Command command) {
         Customer customer = select(command, customersWithStatus(CustomerStatus.SEATED),
                 "no seated customer is waiting to order", "only a seated customer can order");
-        Order order = restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), currentTurn);
+        Order order = restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), restaurant.getHappyHour(), currentTurn);
         MenuItem item = order.getItem();
         cli.displayMessage("Waiter takes the order of " + describe(customer) + ". They choose "
                 + item.getName() + " (list price " + Money.format(item.getPriceCents()) + ", "
@@ -182,6 +213,7 @@ public class GameController {
                         + " runs out of patience and leaves without paying. Any unfinished order is cancelled.");
             }
         }
+        restaurant.getHappyHour().endTurn();
     }
 
     /** Step 6: victory needs all three targets. */
