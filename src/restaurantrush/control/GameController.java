@@ -65,6 +65,7 @@ public class GameController {
         cli.displayTurnStatus(restaurant);
         processHappyHourActivation();
         applyHappyHourRecovery();
+        coordinateHostAction();
         coordinateStaffActions();
         coordinatePaymentProcessing();
         processEndOfTurnUpdates();
@@ -105,6 +106,11 @@ public class GameController {
                 + (changes.isEmpty() ? "nobody is waiting." : "waiting customers recover " + String.join(", ", changes) + "."));
     }
 
+    /** Step 2 (Host): at most one queued customer is seated, on top of the Waiter's own task. */
+    private void coordinateHostAction() {
+        chooseUntilAccepted(cli::readHostChoice, this::performHostTask);
+    }
+
     /** Steps 2 and 3: the Waiter acts first, then the Chef. A rejected choice does not use up the task. */
     private void coordinateStaffActions() {
         chooseUntilAccepted(cli::readWaiterChoice, this::performWaiterTask);
@@ -132,6 +138,16 @@ public class GameController {
             case "SERVE" -> serve(command);
             default -> throw new IllegalArgumentException(
                     "Unknown Waiter command '" + command.verb + "'. Use SEAT, TAKE_ORDER, SERVE or WAIT.");
+        }
+    }
+
+    private void performHostTask(String choice) {
+        Command command = Command.parse(choice);
+        switch (command.verb) {
+            case "WAIT" -> { }
+            case "SEAT" -> seatQueuedCustomer(command, restaurant.getHost()::seatCustomer, "Host");
+            default -> throw new IllegalArgumentException(
+                    "Unknown Host command '" + command.verb + "'. Use SEAT or WAIT.");
         }
     }
 

@@ -39,7 +39,8 @@ public class RestaurantCLI {
         controller = new GameController(this);
         out.println("SC2002 Restaurant Rush - Stage 3");
         out.println("You manage a restaurant for " + controller.getMaxTurns() + " turns. Each turn the Waiter does one");
-        out.println("task (SEAT, TAKE_ORDER or SERVE) and the Chef advances one order by one unit (COOK).");
+        out.println("task (SEAT, TAKE_ORDER or SERVE), the Host can also SEAT one queued customer, and the Chef");
+        out.println("advances one order by one unit (COOK). Once per game you may switch Happy Hour on.");
         out.println("Press Enter to WAIT. Goal: at least " + GameController.REQUIRED_PAID_CUSTOMERS + " paid customers, revenue of at least "
                 + Money.format(GameController.REQUIRED_REVENUE_CENTS) + ", average satisfaction of at least "
                 + GameController.REQUIRED_AVERAGE_SATISFACTION + ".");
@@ -49,6 +50,10 @@ public class RestaurantCLI {
             out.println();
             out.println("The input ended before the game finished, so the run stops here.");
         }
+    }
+
+    public String readHostChoice() {
+        return readLine("Host    [SEAT <#> | WAIT]: ");
     }
 
     public String readWaiterChoice() {
@@ -94,6 +99,7 @@ public class RestaurantCLI {
                     "#" + customer.getId(), customer.getTypeLabel(), customer.getSatisfaction(), customer.getStatus(),
                     orderText(customer)));
         }
+        out.println("Host tasks:   " + hostTasksText(restaurant));
         out.println("Waiter tasks: " + waiterTasksText(restaurant));
         out.println("Chef tasks:   " + chefTasksText(restaurant));
     }
@@ -176,6 +182,13 @@ public class RestaurantCLI {
         return order.getItem().getName() + " " + order.getCompletedUnits() + "/"
                 + order.getItem().getPreparationUnits() + " units, " + order.getStatus()
                 + ", " + Money.format(order.getBillCents());
+    }
+
+    private static String hostTasksText(Restaurant restaurant) {
+        if (restaurant.getWaitingQueue().isEmpty() || restaurant.findAvailableTable() == null) {
+            return "none available (WAIT)";
+        }
+        return "SEAT " + ids(new ArrayList<>(restaurant.getWaitingQueue()));
     }
 
     private static String waiterTasksText(Restaurant restaurant) {
