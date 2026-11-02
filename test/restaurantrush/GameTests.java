@@ -10,9 +10,11 @@ import java.util.List;
 import restaurantrush.boundary.RestaurantCLI;
 import restaurantrush.entity.Customer;
 import restaurantrush.entity.CustomerStatus;
+import restaurantrush.entity.Menu;
 import restaurantrush.entity.MenuItem;
 import restaurantrush.entity.Order;
 import restaurantrush.entity.OrderStatus;
+import restaurantrush.entity.RegularCustomer;
 import restaurantrush.entity.Restaurant;
 import restaurantrush.entity.Table;
 
@@ -76,7 +78,7 @@ public final class GameTests {
     }
 
     private static void customerLosesEightPerWaitingTurnAndNothingOnceServed() {
-        Customer waiting = new Customer(1);
+        Customer waiting = new RegularCustomer(1);
         waiting.reduceSatisfaction();
         check("waiting customer loses 8", waiting.getSatisfaction() == 92);
         waiting.markSeated();
@@ -89,7 +91,7 @@ public final class GameTests {
         waiting.reduceSatisfaction();
         check("served customer loses nothing", waiting.getSatisfaction() == 76);
 
-        Customer patient = new Customer(2);
+        Customer patient = new RegularCustomer(2);
         for (int turn = 1; turn <= 12; turn++) {
             patient.reduceSatisfaction();
         }
@@ -99,7 +101,7 @@ public final class GameTests {
     }
 
     private static void customerTurnGuardsDelayEatingAndPayment() {
-        Customer customer = new Customer(1);
+        Customer customer = new RegularCustomer(1);
         customer.markSeated();
         customer.assignOrder(new Order(new MenuItem("Burger", 1500, 1)));
         customer.markServed(4);
@@ -112,31 +114,32 @@ public final class GameTests {
     }
 
     private static void customerChoosesFoodByIdRule() {
-        List<MenuItem> menu = new Restaurant().getMenu().getItems();
-        check("customer 1 picks Burger", new Customer(1).chooseMenuItem(menu).getName().equals("Burger"));
-        check("customer 2 picks Pasta", new Customer(2).chooseMenuItem(menu).getName().equals("Pasta"));
-        check("customer 3 picks Salad", new Customer(3).chooseMenuItem(menu).getName().equals("Salad"));
+        Menu menu = new Restaurant().getMenu();
+        check("customer 1 picks Burger", new RegularCustomer(1).chooseMenuItem(menu).getName().equals("Burger"));
+        check("customer 2 picks Pasta", new RegularCustomer(2).chooseMenuItem(menu).getName().equals("Pasta"));
+        check("customer 3 picks Salad", new RegularCustomer(3).chooseMenuItem(menu).getName().equals("Salad"));
     }
 
     private static void tableHoldsOneCustomer() {
         Table table = new Table(1);
-        Customer first = new Customer(1);
+        Customer first = new RegularCustomer(1);
         table.seat(first);
         check("seated table is not available", !table.isAvailable() && table.getOccupied() == first);
-        expectRejected("a second customer cannot take an occupied table", () -> table.seat(new Customer(2)));
+        expectRejected("a second customer cannot take an occupied table", () -> table.seat(new RegularCustomer(2)));
         table.release();
         check("released table is available", table.isAvailable());
     }
 
     private static void paymentRequiresReadyToPayAndFreesTable() {
         Restaurant restaurant = new Restaurant();
-        Customer customer = restaurant.registerArrival();
+        Customer customer = new RegularCustomer(1);
+        restaurant.registerArrival(customer);
         Table table = restaurant.findAvailableTable();
         restaurant.getWaiter().seatCustomer(customer, table);
         restaurant.getWaitingQueue().remove(customer);
         expectRejected("the Cashier cannot charge a seated customer",
                 () -> restaurant.getCashier().processPayment(customer, restaurant));
-        restaurant.getWaiter().takeOrder(customer, customer.chooseMenuItem(restaurant.getMenu().getItems()));
+        restaurant.getWaiter().takeOrder(customer, customer.chooseMenuItem(restaurant.getMenu()));
         restaurant.getChef().prepare(customer.getOrder());
         restaurant.getWaiter().serveOrder(customer, 3);
         customer.markReadyToPay(4);
@@ -152,12 +155,14 @@ public final class GameTests {
 
     private static void abandonmentCancelsOrderFreesTableAndLeavesQueue() {
         Restaurant restaurant = new Restaurant();
-        Customer seated = restaurant.registerArrival();
-        Customer queued = restaurant.registerArrival();
+        Customer seated = new RegularCustomer(1);
+        Customer queued = new RegularCustomer(2);
+        restaurant.registerArrival(seated);
+        restaurant.registerArrival(queued);
         Table table = restaurant.findAvailableTable();
         restaurant.getWaiter().seatCustomer(seated, table);
         restaurant.getWaitingQueue().remove(seated);
-        restaurant.getWaiter().takeOrder(seated, seated.chooseMenuItem(restaurant.getMenu().getItems()));
+        restaurant.getWaiter().takeOrder(seated, seated.chooseMenuItem(restaurant.getMenu()));
         restaurant.handleAbandonment(seated);
         check("abandoned customer is ABANDONED", seated.getStatus() == CustomerStatus.ABANDONED);
         check("abandoned customer's order is CANCELLED", seated.getOrder().getStatus() == OrderStatus.CANCELLED);

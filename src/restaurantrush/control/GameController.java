@@ -28,10 +28,9 @@ public class GameController {
     public static final int REQUIRED_AVERAGE_SATISFACTION = 60;
 
     private static final int MAX_TURNS = 18;
-    private static final int ARRIVAL_INTERVAL = 3;
-    private static final int LAST_ARRIVAL_TURN = 16;
 
     private final Restaurant restaurant;
+    private final ArrivalSchedule schedule;
     private int currentTurn;
     private final int maxTurns;
     private final RestaurantCLI cli;
@@ -39,6 +38,7 @@ public class GameController {
     public GameController(RestaurantCLI cli) {
         this.cli = cli;
         this.restaurant = new Restaurant();
+        this.schedule = new ArrivalSchedule();
         this.maxTurns = MAX_TURNS;
     }
 
@@ -67,10 +67,10 @@ public class GameController {
         processEndOfTurnUpdates();
     }
 
-    /** Step 1: one customer arrives at the start of turns 1, 4, 7, 10, 13 and 16. */
+    /** Step 1: the schedule decides who arrives at the start of turns 1, 4, 7, 10, 13 and 16. */
     private void processScheduledArrival() {
-        if (currentTurn % ARRIVAL_INTERVAL == 1 && currentTurn <= LAST_ARRIVAL_TURN) {
-            restaurant.registerArrival();
+        if (schedule.isArrivalTurn(currentTurn)) {
+            restaurant.registerArrival(schedule.createArrival(currentTurn));
         }
     }
 
@@ -123,15 +123,15 @@ public class GameController {
         }
         seater.accept(customer, table);
         restaurant.getWaitingQueue().remove(customer);
-        cli.displayMessage(actor + " seats Customer #" + customer.getId() + " at Table " + table.getTableId() + ".");
+        cli.displayMessage(actor + " seats " + describe(customer) + " at Table " + table.getTableId() + ".");
     }
 
     private void takeOrder(Command command) {
         Customer customer = select(command, customersWithStatus(CustomerStatus.SEATED),
                 "no seated customer is waiting to order", "only a seated customer can order");
-        MenuItem item = customer.chooseMenuItem(restaurant.getMenu().getItems());
+        MenuItem item = customer.chooseMenuItem(restaurant.getMenu());
         restaurant.getWaiter().takeOrder(customer, item);
-        cli.displayMessage("Waiter takes Customer #" + customer.getId() + "'s order. They choose "
+        cli.displayMessage("Waiter takes the order of " + describe(customer) + ". They choose "
                 + item.getName() + " (" + Money.format(item.getPriceCents()) + ", "
                 + item.getPreparationUnits() + " preparation unit(s)).");
     }
@@ -140,8 +140,8 @@ public class GameController {
         Customer customer = select(command, customersWithStatus(CustomerStatus.ORDERED),
                 "no customer has an order to serve", "only a customer who has ordered can be served");
         restaurant.getWaiter().serveOrder(customer, currentTurn);
-        cli.displayMessage("Waiter serves Customer #" + customer.getId() + "'s "
-                + customer.getOrder().getItem().getName() + ".");
+        cli.displayMessage("Waiter serves the " + customer.getOrder().getItem().getName() + " to "
+                + describe(customer) + ".");
     }
 
     private void prepare(Command command) {
@@ -149,7 +149,7 @@ public class GameController {
                 "no order has been taken yet", "only a customer who has ordered has food to prepare");
         Order order = customer.getOrder();
         restaurant.getChef().prepare(order);
-        cli.displayMessage("Chef works on Customer #" + customer.getId() + "'s " + order.getItem().getName()
+        cli.displayMessage("Chef works on the " + order.getItem().getName() + " for " + describe(customer)
                 + ": " + order.getCompletedUnits() + "/" + order.getItem().getPreparationUnits()
                 + " units, order is " + order.getStatus() + ".");
     }
@@ -159,14 +159,14 @@ public class GameController {
         for (Customer customer : restaurant.getCustomers()) {
             if (customer.canFinishEating(currentTurn)) {
                 customer.markReadyToPay(currentTurn);
-                cli.displayMessage("Customer #" + customer.getId() + " finishes eating and is ready to pay.");
+                cli.displayMessage(describe(customer) + " finishes eating and is ready to pay.");
             }
         }
         Customer payer = restaurant.findOldestEligiblePayer(currentTurn);
         if (payer != null) {
             int bill = payer.getOrder().getPriceCents();
             restaurant.getCashier().processPayment(payer, restaurant);
-            cli.displayMessage("Cashier collects " + Money.format(bill) + " from Customer #" + payer.getId()
+            cli.displayMessage("Cashier collects " + Money.format(bill) + " from " + describe(payer)
                     + " (satisfaction " + payer.getSatisfaction() + "). The table is free again.");
         }
     }
@@ -177,7 +177,7 @@ public class GameController {
             customer.reduceSatisfaction();
             if (customer.shouldAbandon()) {
                 restaurant.handleAbandonment(customer);
-                cli.displayMessage("Customer #" + customer.getId()
+                cli.displayMessage(describe(customer)
                         + " runs out of patience and leaves without paying. Any unfinished order is cancelled.");
             }
         }
@@ -209,7 +209,7 @@ public class GameController {
         }
         for (Customer customer : restaurant.getCustomers()) {
             if (customer.getId() == command.customerId) {
-                throw new IllegalStateException("Customer #" + customer.getId() + " is " + customer.getStatus()
+                throw new IllegalStateException(describe(customer) + " is " + customer.getStatus()
                         + ": " + ineligible);
             }
         }
@@ -224,6 +224,10 @@ public class GameController {
             }
         }
         return matching;
+    }
+
+    private static String describe(Customer customer) {
+        return "Customer #" + customer.getId() + " (" + customer.getTypeLabel() + ")";
     }
 
     private static String idList(Collection<Customer> customers) {

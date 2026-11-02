@@ -36,7 +36,7 @@ public class RestaurantCLI {
     /** Runs one game. If the input ends before the game does, the run stops with a message. */
     public void start() {
         controller = new GameController(this);
-        out.println("SC2002 Restaurant Rush - Stage 1");
+        out.println("SC2002 Restaurant Rush - Stage 2");
         out.println("You manage a restaurant for " + controller.getMaxTurns() + " turns. Each turn the Waiter does one");
         out.println("task (SEAT, TAKE_ORDER or SERVE) and the Chef advances one order by one unit (COOK).");
         out.println("Press Enter to WAIT. Goal: at least " + GameController.REQUIRED_PAID_CUSTOMERS + " paid customers, revenue of at least "
@@ -73,8 +73,9 @@ public class RestaurantCLI {
             out.println("  (nobody has arrived yet)");
         }
         for (Customer customer : restaurant.getCustomers()) {
-            out.println(String.format(Locale.ROOT, "  %-4s satisfaction %3d  %-12s order: %s",
-                    "#" + customer.getId(), customer.getSatisfaction(), customer.getStatus(), orderText(customer)));
+            out.println(String.format(Locale.ROOT, "  %-4s %-8s satisfaction %3d  %-12s order: %s",
+                    "#" + customer.getId(), customer.getTypeLabel(), customer.getSatisfaction(), customer.getStatus(),
+                    orderText(customer)));
         }
         out.println("Waiter tasks: " + waiterTasksText(restaurant));
         out.println("Chef tasks:   " + chefTasksText(restaurant));
@@ -127,7 +128,7 @@ public class RestaurantCLI {
         }
         List<String> entries = new ArrayList<>();
         for (Customer customer : restaurant.getWaitingQueue()) {
-            entries.add("#" + customer.getId() + " (satisfaction " + customer.getSatisfaction() + ")");
+            entries.add("#" + customer.getId() + " " + customer.getTypeLabel() + " (satisfaction " + customer.getSatisfaction() + ")");
         }
         return String.join(" -> ", entries);
     }
@@ -137,7 +138,8 @@ public class RestaurantCLI {
         for (Table table : restaurant.getTables()) {
             Customer occupant = table.getOccupied();
             entries.add("Table " + table.getTableId() + ": "
-                    + (occupant == null ? "free" : "#" + occupant.getId() + " (" + occupant.getStatus() + ")"));
+                    + (occupant == null ? "free"
+                            : "#" + occupant.getId() + " " + occupant.getTypeLabel() + " (" + occupant.getStatus() + ")"));
         }
         return String.join(" | ", entries);
     }

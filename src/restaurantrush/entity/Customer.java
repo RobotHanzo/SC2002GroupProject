@@ -1,16 +1,14 @@
 package restaurantrush.entity;
 
-import java.util.List;
-
 /**
- * A restaurant guest. Stage 1 has one kind of customer: a regular who starts at satisfaction 100
- * and loses 8 for every turn spent waiting. Satisfaction and status are private and change only
- * through the methods below.
+ * A restaurant guest. Every kind of customer follows the same order and service flow; subclasses
+ * differ only in the hooks below (loss per waiting turn, billing, food choice, reaction to being
+ * served), so the controller and staff call these on Customer and never check the type.
+ * Satisfaction and status are private and change only through the methods of this class.
  * Lifecycle: WAITING -> SEATED -> ORDERED -> SERVED -> READY_TO_PAY -> PAID, or ABANDONED.
  */
-public class Customer {
+public abstract class Customer {
     private static final int MAX_SATISFACTION = 100;
-    private static final int SATISFACTION_LOSS = 8;
 
     private final int customerId;
     private int satisfaction = MAX_SATISFACTION;
@@ -19,7 +17,7 @@ public class Customer {
     private int servedTurn;
     private int readyTurn;
 
-    public Customer(int customerId) {
+    protected Customer(int customerId) {
         this.customerId = customerId;
     }
 
@@ -35,9 +33,36 @@ public class Customer {
         return satisfaction;
     }
 
-    /** Documented food rule: the customer takes menu entry number (customerId mod menu size). */
-    public MenuItem chooseMenuItem(List<MenuItem> items) {
-        return items.get(customerId % items.size());
+    /** Short name of the customer type, for display. */
+    public abstract String getTypeLabel();
+
+    /** Satisfaction lost at the end of each turn spent waiting for service. */
+    protected abstract int getSatisfactionLoss();
+
+    /** Documented food rule: menu entry number (customerId mod menu size). The Critic overrides it. */
+    public MenuItem chooseMenuItem(Menu menu) {
+        return menu.getItem(customerId % menu.size());
+    }
+
+    /** The bill for a dish at the given list price. The VIP overrides it to apply a discount. */
+    public int calculateBillCents(int basePriceCents) {
+        return basePriceCents;
+    }
+
+    /** Called when the Waiter serves this customer; turnsWaited counts turns since the order was taken. */
+    public void onServed(int turnsWaited) {
+    }
+
+    /** Only subclasses may move satisfaction directly; the value always stays within 0..100. */
+    protected void adjustSatisfaction(int delta) {
+        satisfaction = Math.max(0, Math.min(MAX_SATISFACTION, satisfaction + delta));
+    }
+
+    /** End-of-turn loss for a customer who has not been served yet; everyone else loses nothing. */
+    public void reduceSatisfaction() {
+        if (isAwaitingService()) {
+            adjustSatisfaction(-getSatisfactionLoss());
+        }
     }
 
     public void assignOrder(Order newOrder) {
@@ -82,13 +107,6 @@ public class Customer {
     public void markPaid() {
         require(CustomerStatus.READY_TO_PAY);
         status = CustomerStatus.PAID;
-    }
-
-    /** End-of-turn loss for a customer who has not been served yet; everyone else loses nothing. */
-    public void reduceSatisfaction() {
-        if (isAwaitingService()) {
-            satisfaction = Math.max(0, satisfaction - SATISFACTION_LOSS);
-        }
     }
 
     public boolean shouldAbandon() {

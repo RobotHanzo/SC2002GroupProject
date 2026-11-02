@@ -33,12 +33,10 @@ public class Restaurant {
                 new MenuItem("Pasta", 1800, 2)));
     }
 
-    /** A new regular customer joins the back of the waiting queue. */
-    public Customer registerArrival() {
-        Customer customer = new Customer(customers.size() + 1);
+    /** A newly arrived customer joins the back of the waiting queue. */
+    public void registerArrival(Customer customer) {
         customers.add(customer);
         waitingQueue.add(customer);
-        return customer;
     }
 
     /** The first free table, or null when both are occupied. */
