@@ -1,2 +1,5 @@
 /docs/diagrams/src/README.md
 /docs/diagrams/src/render.mjs
+
+# Java build output (see README for the build command)
+/out/
