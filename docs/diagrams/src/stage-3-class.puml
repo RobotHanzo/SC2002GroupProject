@@ -285,17 +285,19 @@ Restaurant "1" *-down- "1" Cashier : cashier
 Restaurant "1" *-down- "1" Menu : menu
 
 ' ---------- aggregation (customers arrive and leave) ----------
-Restaurant "1" o-down- "0..*" Customer : customers
-Restaurant "1" o-down- "0..*" Customer : waitingQueue\n{ordered, FIFO}
+' Multiplicities at the Customer end sit in the labels: three links meet at Customer's corner and end labels would overlap there.
+Restaurant "1" o-down- Customer : customers [0..*]
+Restaurant "1" o-down- Customer : waitingQueue [0..*]\n{ordered, FIFO}
 
 ' ---------- menu ----------
 Menu "1" o-down- "3..*" MenuItem : items
 MenuItem <|-down- ComboMeal
-ComboMeal "0..*" o-up- "2" MenuItem : components
+' Inheritance and aggregation join the same two boxes, so the aggregation is coloured and its multiplicity sits in the label
+ComboMeal o-[#B5541C,bold]up- MenuItem : components [2]
 
 ' ---------- domain associations ----------
-Customer "0..1" -up- "1" Table : occupant
-Customer "1" -right-> "0..1" Order
+Table "1" -down-> Customer : occupant [0..1]
+Customer "1" -right-> Order : order [0..1]
 Order "0..*" -right-> "1" MenuItem
 Customer -down-> CustomerStatus : status
 Order -down-> OrderStatus : status
@@ -395,7 +397,10 @@ end note
 
 note bottom of ComboMeal
   <b>COMBO</b>
-  Stage 3 menu = Salad, Burger, Pasta + 2 ComboMeals
+  Hollow-triangle line: a ComboMeal is a MenuItem. Orange
+  diamond line: it holds 2 MenuItem components (a MenuItem
+  can be a component of 0..* combos).
+  Stage 3 menu =Salad, Burger, Pasta + 2 ComboMeals
   (5 entries), registered once at game setup.
   Customer.chooseMenuItem(menu) picks from it.
   price = (a.price + b.price) x 90%, rounded:
