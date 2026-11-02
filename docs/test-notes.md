@@ -6,9 +6,9 @@ Run every command from the repository root with JDK 17 or newer. Build first:
 javac --release 17 -d out -sourcepath src src/restaurantrush/Main.java
 ```
 
-The recorded runs in `runs/` belong to the stage they are checked out with. The Stage 1 runs are in the `stage-1` tag (`git checkout stage-1`); this folder holds the Stage 2 runs.
+The recorded runs in `runs/` belong to the stage they are checked out with. This folder holds the Stage 3 runs; the Stage 1 and Stage 2 runs are in the `stage-1` and `stage-2` tags (`git checkout stage-1`).
 
-## Stage 2 (tag `stage-2`)
+## Stage 3 (tag `stage-3`)
 
 ### Automated checks
 
@@ -17,13 +17,24 @@ javac --release 17 -d out -sourcepath src test/restaurantrush/GameTests.java
 java -cp out restaurantrush.GameTests
 ```
 
-Expected: `108 checks passed, 0 failed`. The checks cover:
+Expected: `164 checks passed, 0 failed`. The checks cover:
 
-- **Stage 1 rules that must still hold**: the menu, legal and illegal order transitions, the Regular's loss of 8 per waiting turn (and nothing once served), the turn guards for eating and payment, the food rule for Regulars, tables, payment (revenue, PAID customer and order, table freed, no double payment) and abandonment (order cancelled, table freed, queue left);
-- **VIP and Critic**: loss per waiting turn is 8, 5 and 12 through the common `Customer` type, a Critic reaches 0 on its 9th waiting turn, the VIP pays 90% (Burger $13.50, Salad $8.10, Pasta $16.20) while Regular and Critic pay full price, the Waiter locks the bill in the order and the Cashier collects it, the Critic always orders Pasta, the Critic loses a further 10 when served 3 turns after ordering but not after 2, VIP and Regular are unaffected by slow service;
-- **Arrivals**: six arrivals, on turns 1, 4, 7, 10, 13 and 16, numbered in arrival order, including a VIP and a Critic;
-- **Design**: `GameController` contains no `instanceof` and never names a customer type;
-- **The two recorded runs below**, including that exactly six customers arrive and all 18 turns are played.
+- **Stage 1 and 2 rules that must still hold**: order status rules, the Regular's loss of 8, the turn guards, tables, payment, abandonment, loss per waiting turn for Regular, VIP and Critic (8, 5, 12), the VIP's 10% discount, the locked bill, the Critic's food and late-service penalty, the six arrivals (including a VIP and a Critic), and that `GameController` contains no type checks. The food-rule checks that assume three dishes build that three-dish menu explicitly, because the Stage 3 menu has five entries;
+- **ComboMeal**: Salad + Burger $21.60 and 2 units, Salad + Pasta $24.30 and 3 units, Burger + Pasta $29.70 and 3 units; a combo holds its two component items and is a `MenuItem`; a 3-unit combo is READY only after 3 units; the menu has five entries (the three dishes and two combos built from the menu's own dishes); Regular and VIP choose by `customerId mod 5`, the Critic takes the Salad + Pasta combo;
+- **Happy Hour**: lasts exactly two turns, can be switched on once per game (a second activation is refused and does not restart it), VIP Burger $10.80, Regular Pasta $14.40, Critic's combo $19.44, no discount when off; an order placed before Happy Hour keeps its price, and an order taken during it keeps the discount after it ends; waiting customers recover 15 (capped at 100), served customers and customers who have left do not;
+- **Host**: seats a queued customer, refuses an occupied table or a customer who is not waiting without changing anything, and the Waiter can still seat;
+- **The recorded runs below**: results, Happy Hour offered only until used (and offered again after being declined), the Host seating while the Waiter takes the order in the same turn, rejected choices explained and followed by another prompt in the same turn.
+
+### Reference values from the brief
+
+| Case | Price | Prep units | Checked by |
+|---|---|---|---|
+| Combo: Salad + Burger | $21.60 | 2 | `GameTests` |
+| Combo: Salad + Pasta | $24.30 | 3 | `GameTests` |
+| Combo: Burger + Pasta | $29.70 | 3 | `GameTests` |
+| VIP, Burger | $13.50 | 1 | `GameTests` |
+| VIP, Burger, during Happy Hour | $10.80 | 1 | `GameTests` and the victory run (turn 1) |
+| Regular, Pasta, during Happy Hour | $14.40 | 2 | `GameTests` |
 
 ### Reproducible victory run
 
@@ -31,30 +42,33 @@ Expected: `108 checks passed, 0 failed`. The checks cover:
 java -cp out restaurantrush.Main --input runs/victory.txt
 ```
 
-Expected ending: `VICTORY`, 5 paid customers, revenue $76.50, average satisfaction 69.6, 5 customers served, 0 unhappy departures, 18 turns used.
+Expected ending: `VICTORY`, 5 paid customers, revenue $83.70, average satisfaction 81.2, 6 customers served, 0 unhappy departures, 18 turns used.
 
-| Turn | Waiter | Chef | What to look for |
-|---|---|---|---|
-| 1 | SEAT 1 | WAIT | VIP #1 seated, satisfaction 100 to 95 |
-| 2 | TAKE_ORDER 1 | COOK 1 | the VIP orders a Burger: list price $15.00, bill locked at $13.50; the Burger is READY at the end of the turn |
-| 3 | SERVE 1 | WAIT | READY to SERVED on a later turn |
-| 4 | SEAT 2 | WAIT | #2 (Regular) arrives; #1 finishes eating and is READY_TO_PAY |
-| 5 | TAKE_ORDER 2 | COOK 2 | Cashier collects $13.50 from the VIP (satisfaction 90) |
-| 6 | WAIT | COOK 2 | the Pasta (2 units) is READY |
-| 7 | SERVE 2 | WAIT | #3 arrives |
-| 8 | SEAT 3 | WAIT | |
-| 9 | TAKE_ORDER 3 | COOK 3 | Cashier collects $18.00 from #2 |
-| 10 | SERVE 3 | WAIT | #4 (Critic) arrives |
-| 11 | SEAT 4 | WAIT | |
-| 12 | TAKE_ORDER 4 | COOK 4 | the Critic orders Pasta although the id rule would give a Burger; Cashier collects $9.00 from #3 |
-| 13 | SEAT 5 | COOK 4 | manager choice: seat the Regular (#5 arrives) while the Critic's Pasta is already READY |
-| 14 | TAKE_ORDER 5 | COOK 5 | the Critic keeps losing 12 per turn (40) |
-| 15 | SERVE 4 | COOK 5 | the Critic is served 3 turns after ordering: -10, satisfaction 30 |
-| 16 | SERVE 5 | WAIT | #6 arrives |
-| 17 | SEAT 6 (rejected), WAIT | WAIT | "Both tables are occupied"; Cashier collects $18.00 from the Critic (satisfaction 30) |
-| 18 | WAIT | WAIT | Cashier collects $18.00 from #5 (satisfaction 76): the fifth payment |
+| Turn | Happy Hour | Host | Waiter | Chef | What to look for |
+|---|---|---|---|---|---|
+| 1 | `y` | SEAT 5 (rejected), SEAT 1 | TAKE_ORDER 1 | COOK 1 | Happy Hour on (2 turns left). The Host seats the VIP and the Waiter takes the order in the same turn: bill locked at $10.80 ($15.00 x 0.9 x 0.8). Burger READY |
+| 2 | | WAIT | SERVE 1 | WAIT | Last Happy Hour turn: the VIP recovers 95 to 100. READY to SERVED on a later turn |
+| 3 | | WAIT | WAIT | WAIT | VIP finishes eating (READY_TO_PAY) |
+| 4 | | SEAT 2 | TAKE_ORDER 2 | COOK 2 | Cashier collects $10.80 from the VIP (satisfaction 100). #2 (Regular) arrives, is seated by the Host and orders a Pasta in the same turn |
+| 5 | | WAIT | WAIT | COOK 2 | Pasta (2 units) READY |
+| 6 | | WAIT | SERVE 3 (rejected), SERVE 2 | WAIT | "There is no customer #3" |
+| 7 | | SEAT 3 | TAKE_ORDER 3 | COOK 3 | #3 arrives and orders the Salad + Burger combo ($21.60, 2 units) |
+| 8 | | WAIT | WAIT | COOK 3 | Cashier collects $18.00 from #2; combo READY after 2 units |
+| 9 | | WAIT | SERVE 3 | WAIT | |
+| 10 | | SEAT 4 | TAKE_ORDER 4 | COOK 4 | #4 (Critic) arrives and orders the Salad + Pasta combo ($24.30, 3 units) |
+| 11 | | WAIT | WAIT | COOK 4 | Cashier collects $21.60 from #3 |
+| 12 | | WAIT | WAIT | COOK 4 | combo READY after 3 units |
+| 13 | | SEAT 5 | SERVE 4 | WAIT | Manager choice: the Waiter serves the Critic (3 turns after ordering: -10, satisfaction 54) before taking #5's order |
+| 14 | | WAIT | TAKE_ORDER 5 | COOK 5 | #5 orders a Salad |
+| 15 | | WAIT | SERVE 5 | WAIT | Cashier collects $24.30 from the Critic |
+| 16 | | SEAT 6 | TAKE_ORDER 6 | COOK 6 | #6 arrives (it cannot finish paying in time) |
+| 17 | | WAIT | SERVE 6 | WAIT | Cashier collects $9.00 from #5 (the fifth payment) |
+| 18 | | WAIT | WAIT | WAIT | #6 becomes READY_TO_PAY too late to pay |
 
-The choice in turns 13 to 15 changes the outcome: serving the Critic first (turn 14) would keep their satisfaction at 52 but leave the Regular too late to pay by turn 18, giving 4 paid customers, $58.50 and average 73.5 instead of 5, $76.50 and 69.6. It is still a victory here, but the revenue and the paid count change.
+Choices that change the outcome (checked by replaying the run with a different choice):
+
+- **Happy Hour.** Never switching it on gives $86.40 revenue and average satisfaction 80.2 instead of $83.70 and 81.2: Happy Hour costs $2.70 of revenue and buys one satisfaction point on average here, which matters when the average is close to 60.
+- **Turn 13.** The run serves the Critic first (satisfaction 54 at payment). Taking #5's order first and serving the Critic in turn 14 costs the Critic a further 12, so it pays with 42 and the average falls from 81.2 to 78.8 (still a victory, with the same revenue).
 
 ### Reproducible defeat run
 
@@ -62,15 +76,23 @@ The choice in turns 13 to 15 changes the outcome: serving the Critic first (turn
 java -cp out restaurantrush.Main --input runs/defeat.txt
 ```
 
-The manager serves the VIP through to payment and then only chooses WAIT. Expected ending: `DEFEAT`, 1 paid customer, revenue $13.50, average satisfaction 90.0, 1 served, 2 unhappy departures (customer 2, a Regular, leaves at the end of turn 16; customer 4, the Critic, at the end of turn 18), 18 turns used. A happy VIP is not enough: all three targets must be met.
+The manager switches Happy Hour on in turn 1, serves the VIP through to payment, and then only chooses WAIT. Expected ending: `DEFEAT`, 1 paid customer, revenue $10.80, average satisfaction 100.0, 1 served, 2 unhappy departures (customer 2, a Regular, leaves at the end of turn 16; customer 4, the Critic, at the end of turn 18), 18 turns used. A perfectly happy customer is not enough: all three targets must be met.
 
 ### Invalid input
 
-`runs/victory.txt` contains a rejected Waiter choice in turn 17 (`SEAT 6` with both tables occupied). The reason is printed and the Waiter chooses again in the same turn. `GameTests` checks that the message appears and that a prompt follows in the same turn. More rejections (a dish that is not READY, an unknown customer, a customer with no order) are covered by the Stage 1 run in the `stage-1` tag.
+`runs/victory.txt` contains a rejected Host choice (turn 1, `SEAT 5` before customer 5 exists) and a rejected Waiter choice (turn 6, `SERVE 3`). Each prints the reason and asks again in the same turn. `GameTests` checks the messages and that the matching prompt follows. A Happy Hour answer other than `y` or `n` is rejected and asked again (checked by an inline input in `GameTests`).
+
+## Stage 2 (tag `stage-2`)
+
+Check out the tag and use its `runs/` and tests.
+
+- Automated checks: 108 pass.
+- Victory run: `VICTORY`, 5 paid, $76.50, average 69.6, 5 served, 0 unhappy departures. The VIP pays $13.50, the Critic orders Pasta and, served 3 turns after ordering, pays with satisfaction 30.
+- Defeat run: the VIP is served, then only WAIT. `DEFEAT`, 1 paid, $13.50, average 90.0, 2 unhappy departures.
 
 ## Stage 1 (tag `stage-1`)
 
-Check out the tag (`git checkout stage-1`) and use its `runs/` and tests.
+Check out the tag and use its `runs/` and tests.
 
 - Automated checks: 55 pass.
 - Victory run: `VICTORY`, 4 paid, $57.00, average 78.0, 5 served, 0 unhappy departures. It includes four rejected choices (the Waiter in turns 2, 6 and 11, the Chef in turn 6).
