@@ -2,7 +2,7 @@
 ' ======================================================================
 ' SC2002 Restaurant Rush - Stage 2 class diagram (source of truth)
 ' Colour key: green = new in Stage 2, yellow = changed since Stage 1, blue = unchanged
-' Render: see docs/diagrams/README.md
+' Render: see docs/diagrams/src/README.md
 ' ======================================================================
 !pragma layout smetana
 title Restaurant Rush: Stage 2 class diagram
@@ -71,7 +71,11 @@ class Restaurant #FAE8A6 {
   +registerArrival(Customer): void
   +findAvailableTable(): Table
   +getMenu(): Menu
-  +getWaiter(), getChef(), getCashier()
+  +getWaiter(): Waiter
+  +getChef(): Chef
+  +getCashier(): Cashier
+  +getCustomers(): List<Customer>
+  +getWaitingQueue(): Queue<Customer>
   +recordPayment(amountCents: int): void
   +releaseTableOf(Customer): void
   +getPaidCustomerCount(): int
@@ -130,7 +134,9 @@ abstract class Customer #FAE8A6 {
   -order: Order
   -servedTurn: int
   -readyTurn: int
-  +getId(), getStatus(), getSatisfaction()
+  +getId(): int
+  +getStatus(): CustomerStatus
+  +getSatisfaction(): int
   {abstract} +getTypeLabel(): String
   +chooseMenuItem(Menu): MenuItem
   +calculateBillCents(basePriceCents: int): int
@@ -140,10 +146,12 @@ abstract class Customer #FAE8A6 {
   +onServed(turnsWaited: int): void
   +assignOrder(Order): void
   +getOrder(): Order
-  +markSeated(), markPaid(): void
+  +markSeated(): void
   +markServed(turn: int): void
   +markReadyToPay(turn: int): void
-  +getServedTurn(), getReadyTurn(): int
+  +markPaid(): void
+  +getServedTurn(): int
+  +getReadyTurn(): int
   +shouldAbandon(): boolean
   +markAbandoned(): void
 }
@@ -182,7 +190,8 @@ class Order #FAE8A6 {
   +markPaid(): void
   +cancel(): void
   +getStatus(): OrderStatus
-  +getBillCents(), getTurnTaken(): int
+  +getBillCents(): int
+  +getTurnTaken(): int
 }
 
 enum CustomerStatus #EAF1F7 {
@@ -205,8 +214,9 @@ enum OrderStatus #EAF1F7 {
 }
 
 ' ---------- layout skeleton (hidden links keep the rows tidy) ----------
-' Smetana cannot route labelled same-rank links, so sideways links carry end roles instead of labels.
-RestaurantCLI -[hidden]right- GameController
+' Smetana cannot route labelled same-rank links, so sideways links carry no mid-link label.
+Restaurant -[hidden]right- GameController
+GameController -[hidden]right- ArrivalSchedule
 Table -[hidden]right- Waiter
 Waiter -[hidden]right- Chef
 Chef -[hidden]right- Cashier
@@ -218,11 +228,11 @@ VIPCustomer -[hidden]right- CriticCustomer
 CriticCustomer -[hidden]right- CustomerStatus
 
 ' ---------- control and boundary ----------
-RestaurantCLI "cli 1" <-right-> "controller 1" GameController
+RestaurantCLI "cli 1" <-down-> "controller 1" GameController
 GameController "1" -right-> "schedule 1" ArrivalSchedule
-GameController "1" -down-> "restaurant 1" Restaurant
+GameController "1" -left-> "restaurant 1" Restaurant
 RestaurantCLI .down.> Restaurant : displays
-ArrivalSchedule .down.> Customer : <<create>>
+ArrivalSchedule .down.> Customer : <<create>>\nRegular, VIP, Critic
 
 ' ---------- composition (Restaurant owns these) ----------
 Restaurant "1" *-down- "2" Table : tables
@@ -232,16 +242,16 @@ Restaurant "1" *-down- "1" Cashier : cashier
 Restaurant "1" *-down- "1" Menu : menu
 
 ' ---------- aggregation (customers arrive and leave) ----------
-Restaurant "1" o-down- "customers 0..*" Customer
+Restaurant "1" o-down- "0..*" Customer : customers
 Restaurant "1" o-down- "0..*" Customer : waitingQueue\n{ordered, FIFO}
 
 ' ---------- menu ----------
 Menu "1" o-down- "3" MenuItem : items
 
 ' ---------- domain associations ----------
-Table "1" -down- "0..1" Customer : occupant
-Customer "1" -right-> "order 0..1" Order
-Order "0..*" -right-> "item 1" MenuItem
+Customer "0..1" -up- "1" Table : occupant
+Customer "1" -right-> "0..1" Order
+Order "0..*" -right-> "1" MenuItem
 Customer -down-> CustomerStatus : status
 Order -down-> OrderStatus : status
 Customer <|-down- RegularCustomer
@@ -249,12 +259,19 @@ Customer <|-down- VIPCustomer
 Customer <|-down- CriticCustomer
 
 ' ---------- dependencies ----------
+GameController .[#777777].> Waiter
+GameController .[#777777].> Chef
+GameController .[#777777].> Cashier
+GameController .[#777777].> Customer
 Waiter .left.> Table
 Waiter .down.> Customer : seats / serves
 Waiter .down.> Order : <<create>>
+Waiter .down.> Menu : reads
 Chef .down.> Order : advances
 Cashier .down.> Customer : charges
+Cashier .down.> Order : reads bill
 Cashier .up.> Restaurant : recordPayment,\nreleaseTableOf
+Customer .up.> Menu : chooses from
 
 ' ---------- annotations ----------
 note top of Restaurant
@@ -295,6 +312,9 @@ note left of Customer
   GameController and Waiter call them on Customer
   and never check the type.
   Loss per waiting turn: Regular 8, VIP 5, Critic 12.
+  <b>FOOD CHOICE</b>
+  Regular and VIP: menu.getItem(customerId % menu.size()).
+  Critic overrides it (see CRITIC RULE).
   <b>ENCAPSULATION</b>
   satisfaction is private; subclasses change it only
   through adjustSatisfaction() (clamped 0..100).
@@ -303,9 +323,9 @@ note left of Customer
   pays only if currentTurn > readyTurn.
 end note
 
-note left of Table
+note right of Waiter
   <b>BILLING</b>
-  bill = customer.calculateBillCents(price),
+  takeOrder(): bill = customer.calculateBillCents(price),
   stored in the new Order (VIP pays 90%).
 end note
 
@@ -324,11 +344,16 @@ note left of RegularCustomer #E8E8E8
   <back:#DCEBF7>  blue  </back> unchanged
   <b>Changed since Stage 1</b>
   Customer: abstract; chooseMenuItem() to chooseMenuItem(Menu);
-    + loss, billing and onServed hooks
+    + loss, billing and onServed hooks; + getServedTurn(),
+    getReadyTurn(); canFinishEating(turn) and canPay(turn)
+    removed (the turn guards are checked in GameController)
   Order: getPriceCents() to getBillCents(); + billCents, turnTaken
   Waiter: takeOrder(Customer, MenuItem) to
     takeOrder(Customer, Menu, turn): Order; serveOrder + turn
-  Restaurant: registerArrival() to registerArrival(Customer); + menu
+  Restaurant: registerArrival() to registerArrival(Customer);
+    recordPayment() to recordPayment(amountCents);
+    menuItems / getMenuItems() replaced by menu / getMenu();
+    findOldestEligiblePayer(turn) removed
   GameController: + schedule
 end note
 @enduml

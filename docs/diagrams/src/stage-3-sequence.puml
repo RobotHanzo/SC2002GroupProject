@@ -4,8 +4,9 @@
 ' Scenario: a VIP orders a Burger while the manager has Happy Hour on.
 ' Turns 1-5 are unrolled so that "later turn" rules are visible:
 '   T1 arrive/seat -> T2 order + Chef READY -> T3 serve -> T4 READY_TO_PAY -> T5 pay
-' Render: see docs/diagrams/README.md
+' Render: see docs/diagrams/src/README.md
 ' ======================================================================
+title Restaurant Rush: Stage 3 sequence diagram (page 1 of 3)
 mainframe **sd** VipOrdersBurgerDuringHappyHour
 
 skinparam style strictuml
@@ -19,6 +20,9 @@ skinparam responseMessageBelowArrow true
 skinparam sequenceGroupHeaderFontStyle bold
 skinparam sequenceGroupBackgroundColor #EEF3FA
 skinparam sequenceGroupBodyBackgroundColor transparent
+skinparam sequenceDividerBackgroundColor #E3EAF4
+skinparam sequenceDividerBorderColor #7C93B8
+skinparam sequenceDividerFontStyle bold
 skinparam noteBackgroundColor #FFF4CF
 skinparam noteBorderColor #B08A2E
 skinparam noteFontSize 11
@@ -44,170 +48,190 @@ note over M, rest
   <b>Manager choice:</b> turn on Happy Hour at turn 1 (or decline).
   <b>Outcome:</b> the VIP is PAID on turn 5, bill locked at <b>$10.80</b>,
   satisfaction <b>95</b>. If declined: bill $13.50, satisfaction 90.
-  <b>Not drawn:</b> game reaches hh, menu and staff through restaurant
-  getters; the Host option is left at WAIT (the Waiter seats the VIP).
+  <b>Not drawn:</b> the Host option is left at WAIT (the Waiter seats the VIP).
 end note
+
+M -> cli : start game
+cli -> game : startGame()
+game -> rest : hh = getHappyHour()
+game -> rest : menu = getMenu()
+game -> rest : waiter = getWaiter()
+game -> rest : chef = getChef()
+game -> rest : cashier = getCashier()
+note right of game : GameController holds only restaurant;\nit reaches HappyHour, Menu and staff\nthrough the Restaurant getters
 
 loop for each turn 1..18 (turns 1-5 shown)
 
-  group Turn 1: VIP arrives, manager turns Happy Hour on, Waiter seats the VIP
-    game -> game : **1 Arrivals** processScheduledArrival()
+  == Turn 1: VIP arrives, manager turns Happy Hour on, Waiter seats the VIP ==
+
+  game -> game : **1 Arrivals** processScheduledArrival()
+  game -> sched : arrival = isArrivalTurn(1)
+  opt arrival
     game -> sched : vip = createArrival(1)
     create entity "vip : VIPCustomer" as vip order 80
     sched --> vip : <<create>>
-    note right of vip : status WAITING, satisfaction 100
+    note right : status WAITING,\nsatisfaction 100
     game -> rest : registerArrival(vip)
-    note right : vip joins waitingQueue (FIFO)
-    game -> cli : displayTurnStatus(restaurant)
+    note right : vip joins\nwaitingQueue (FIFO)
+  end
+  game -> cli : displayTurnStatus(restaurant)
 
-    game -> game : **Start of turn** processHappyHourActivation()
-    game -> hh : available = isAvailable()
-    opt available (once per game)
-      game -> cli : choice = readHappyHourChoice()
-      cli -> M : Activate Happy Hour? (y/n)
-      M --> cli : y
-      alt choice == y  [manager decision]
-        game -> hh : activate()
-        note right : used = true, remainingTurns = 2\n(this turn and the next)
-      else choice == n
-        note over game, hh : Declined: turn 2 bill stays $13.50 and\nturn 2 satisfaction ends at 90
-      end
+  game -> game : **Start of turn** processHappyHourActivation()
+  game -> hh : available = isAvailable()
+  opt available (once per game)
+    game -> cli : choice = readHappyHourChoice()
+    cli -> M : Activate Happy Hour? (y/n)
+    M --> cli : y
+    alt choice == y
+      game -> hh : activate()
+      note right : used = true, remainingTurns = 2\n(this turn and the next)
+    else choice == n
+      note over game, hh : Declined: turn 2 bill stays $13.50\nand turn 2 satisfaction ends at 90
     end
-
-    game -> game : applyHappyHourRecovery()
-    game -> hh : active = isActive()
-    opt active
-      game -> hh : amount = getRecoveryAmount()
-      loop for each customer where isAwaitingService()
-        game -> vip : recoverSatisfaction(amount)
-        note right : 100 stays 100 (capped)
-      end
-    end
-
-    game -> game : **2 Manager choices** coordinateStaffActions()
-    game -> cli : choice = readWaiterChoice()
-    cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
-    M --> cli : SEAT
-    opt choice == SEAT
-      game -> rest : t1 = findAvailableTable()
-      game -> waiter : seatCustomer(vip, t1)
-      waiter -> t1 : seat(vip)
-      waiter -> vip : markSeated()
-      note right : WAITING to SEATED
-    end
-    note over game, cli : Chef: manager picks WAIT\n(no order exists yet)
-
-    game -> game : **5 Waiting and abandonment** processEndOfTurnUpdates()
-    loop for each customer where isAwaitingService()
-      game -> vip : reduceSatisfaction()
-      vip -> vip : adjustSatisfaction(-getSatisfactionLoss())
-      note right : polymorphism: loss per waiting turn\nRegular 8, VIP 5, Critic 12\n100 to 95
-      game -> vip : leave = shouldAbandon()
-      opt leave (satisfaction == 0)
-        game -> rest : handleAbandonment(vip)
-        note right : cancel order, free table, ABANDONED
-      end
-    end
-    game -> hh : endTurn()
-    note right : remainingTurns 2 to 1
   end
 
-  group Turn 2: Happy Hour recovery, Waiter takes the order (price locked), Chef finishes it
-    game -> game : **Start of turn** applyHappyHourRecovery()
-    game -> hh : active = isActive()
+  game -> game : applyHappyHourRecovery()
+  game -> hh : active = isActive()
+  opt active
+    game -> hh : amount = getRecoveryAmount()
     loop for each customer where isAwaitingService()
-      game -> vip : recoverSatisfaction(15)
-      note right : 95 to 100 (capped at 100)
+      game -> vip : recoverSatisfaction(amount)
+      note right : 100 stays 100 (capped)
     end
+  end
 
-    game -> game : **2 Manager choices** coordinateStaffActions()
-    game -> cli : choice = readWaiterChoice()
-    cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
-    M --> cli : TAKE_ORDER
-    opt choice == TAKE_ORDER
-      game -> waiter : order = takeOrder(vip, menu, hh, 2)
-      waiter -> vip : item = chooseMenuItem(menu)
-      note right : documented choice rule: Burger\n(1500 cents, 1 unit)
-      waiter -> vip : bill = calculateBillCents(1500)
-      note right : polymorphism: VIPCustomer overrides it\n1500 x 0.9 = 1350
-      waiter -> hh : bill = applyDiscount(1350)
-      note right : Happy Hour active: 1350 x 0.8 = 1080\n(declined: stays 1350)
-      create entity "order : Order" as order order 100
-      waiter --> order : <<create>> Order(item, 1080, 2)
-      note right : billCents is set once in the constructor,\nno setter: price locked at 1080
-      waiter -> vip : assignOrder(order)
-      note right : SEATED to ORDERED
+  game -> game : **2-3 Manager choices and staff actions** coordinateStaffActions()
+  note over game, cli : Steps 3-4 have nothing to do until a dish is READY\nor a customer is served (drawn from turn 3)
+  game -> cli : choice = readWaiterChoice()
+  cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
+  M --> cli : SEAT
+  opt choice == SEAT
+    game -> rest : t1 = findAvailableTable()
+    game -> waiter : seatCustomer(vip, t1)
+    waiter -> t1 : seat(vip)
+    waiter -> vip : markSeated()
+    note right : WAITING to SEATED;\nvip leaves waitingQueue
+  end
+  note over game, cli : Chef: manager picks WAIT (no order exists yet)
+
+  game -> game : **5 Waiting and abandonment** processEndOfTurnUpdates()
+  game -> rest : customers = getCustomers()
+  loop for each customer where isAwaitingService()
+    game -> vip : reduceSatisfaction()
+    vip -> vip : adjustSatisfaction(-getSatisfactionLoss())
+    note right : polymorphism: loss per waiting turn\nRegular 8, VIP 5, Critic 12\n100 to 95
+    game -> vip : leave = shouldAbandon()
+    opt leave (satisfaction == 0)
+      game -> rest : handleAbandonment(vip)
+      note right : cancel order, free table, ABANDONED
     end
-    game -> cli : chefChoice = readChefChoice()
-    cli -> M : Chef: choose an order or WAIT?
-    M --> cli : the VIP's order
+  end
+  game -> hh : endTurn()
+  note right : remainingTurns 2 to 1
+
+  newpage Restaurant Rush: Stage 3 sequence diagram (page 2 of 3)
+  == Turn 2: Happy Hour recovery, Waiter takes the order (price locked), Chef finishes it ==
+
+  game -> game : applyHappyHourRecovery()
+  game -> hh : active = isActive()
+  loop for each customer where isAwaitingService()
+    game -> vip : recoverSatisfaction(15)
+    note right : 95 to 100 (capped at 100)
+  end
+
+  game -> game : **2-3 Manager choices and staff actions** coordinateStaffActions()
+  game -> cli : choice = readWaiterChoice()
+  cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
+  M --> cli : TAKE_ORDER
+  opt choice == TAKE_ORDER
+    game -> waiter : order = takeOrder(vip, menu, hh, 2)
+    waiter -> vip : item = chooseMenuItem(menu)
+    note right : documented rule: Burger\n(1500 cents, 1 unit)
+    waiter -> vip : bill = calculateBillCents(1500)
+    note right : polymorphism: VIPCustomer\noverrides it, 1500 x 0.9 = 1350
+    waiter -> hh : bill = applyDiscount(1350)
+    note right : Happy Hour active: 1350 x 0.8 = 1080\n(declined: stays 1350)
+    create entity "order : Order" as order order 100
+    waiter --> order : <<create>> Order(item, 1080, 2)
+    note right : billCents set once in the\nconstructor, no setter:\nprice locked at 1080
+    waiter -> vip : assignOrder(order)
+    note right : SEATED to ORDERED
+  end
+  game -> cli : chefChoice = readChefChoice()
+  cli -> M : Chef: choose an order or WAIT?
+  M --> cli : the VIP's order
+  opt chefChoice is an order
     game -> chef : prepare(order)
     chef -> order : advancePreparation()
-    note right : Burger 1/1 unit done: PLACED to READY.\nThe Waiter already acted this turn,\nso the dish cannot be served before turn 3
-
-    game -> game : **5 Waiting and abandonment** processEndOfTurnUpdates()
-    loop for each customer where isAwaitingService()
-      game -> vip : reduceSatisfaction()
-      note right : ORDERED, not yet served: 100 to 95\n(abandonment check as in turn 1)
-    end
-    game -> hh : endTurn()
-    note right : remainingTurns 1 to 0\nHappy Hour is over
+    note right : Burger 1/1 unit: PLACED to READY.\nWaiter already acted this turn:\nserved on turn 3 at the earliest
   end
 
-  group Turn 3: Waiter serves the dish that became READY on an earlier turn
-    game -> game : **2 Manager choices** coordinateStaffActions()
-    loop Waiter choice not yet valid (re-prompts every turn)
-      game -> cli : choice = readWaiterChoice()
-      cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
-      M --> cli : SERVE
-      opt choice == SERVE
-        game -> waiter : serveOrder(vip, 3)
-        waiter -> order : ready = isReady()
-        alt ready (finished on turn 2)
-          waiter -> order : markServed()
-          note right : READY to SERVED
-          waiter -> vip : markServed(3)
-          note right : ORDERED to SERVED, servedTurn = 3
-          waiter -> order : turnTaken = getTurnTaken()
-          waiter -> vip : onServed(3 - turnTaken)
-          note right : polymorphic hook: Critic loses 10 if served\nmore than 2 turns after ordering; VIP does nothing
-        else not READY (for example, tried on turn 2)
-          game -> cli : displayError("order is not READY yet")
-          note right : staff task is not used up,\nthe manager chooses again
-        end
+  game -> game : **5 Waiting and abandonment** processEndOfTurnUpdates()
+  loop for each customer where isAwaitingService()
+    game -> vip : reduceSatisfaction()
+    note right : ORDERED, not yet served: 100 to 95\n(abandonment check as in turn 1)
+  end
+  game -> hh : endTurn()
+  note right : remainingTurns 1 to 0\nHappy Hour is over
+
+  == Turn 3: Waiter serves the dish that became READY on an earlier turn ==
+
+  game -> game : **2-3 Manager choices and staff actions** coordinateStaffActions()
+  loop until the Waiter choice is accepted
+    game -> cli : choice = readWaiterChoice()
+    cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
+    M --> cli : SERVE
+    opt choice == SERVE
+      game -> waiter : serveOrder(vip, 3)
+      waiter -> order : ready = isReady()
+      alt ready (finished on turn 2)
+        waiter -> order : markServed()
+        note right : READY to SERVED
+        waiter -> vip : markServed(3)
+        note right : ORDERED to SERVED, servedTurn = 3
+        waiter -> order : turnTaken = getTurnTaken()
+        waiter -> vip : onServed(3 - turnTaken)
+        note right : polymorphic hook: Critic loses 10 if served\nmore than 2 turns after ordering;\nVIP does nothing
+      else not READY (for example, SERVE tried on turn 2)
+        waiter --> game : rejects: "order is not READY yet"
+        game -> cli : displayError(reason)
+        note right : staff task is not used up,\nthe manager chooses again
       end
     end
-    note over game, cli : Chef: manager picks WAIT
-    note over game : **5** served customers lose no satisfaction,\nso the waiting loop has nothing to do
   end
+  note over game, cli : Chef: manager picks WAIT
+  note over game : **5** served customers lose no satisfaction,\nso the waiting loop has nothing to do
 
-  group Turn 4: the customer has eaten for one full turn and becomes READY_TO_PAY
-    note over game : Manager leaves Waiter and Chef at WAIT
-    game -> game : **4 Eating and payment** coordinatePaymentProcessing()
-    opt vip is SERVED and 4 > vip.getServedTurn() (3)
-      game -> vip : markReadyToPay(4)
-      note right : SERVED to READY_TO_PAY, readyTurn = 4
-    end
-    note over game, cashier : Cashier does not charge yet:\n4 > getReadyTurn() (4) is false
+  newpage Restaurant Rush: Stage 3 sequence diagram (page 3 of 3)
+  == Turn 4: the customer has eaten for one full turn and becomes READY_TO_PAY ==
+
+  note over game, cli : Manager leaves Waiter and Chef at WAIT
+  game -> game : **4 Eating and payment** coordinatePaymentProcessing()
+  game -> rest : customers = getCustomers()
+  opt vip is SERVED and 4 > vip.getServedTurn() (3)
+    game -> vip : markReadyToPay(4)
+    note right : SERVED to READY_TO_PAY, readyTurn = 4
   end
+  note over game, cashier : Cashier does not charge yet:\n4 > vip.getReadyTurn() (4) is false
 
-  group Turn 5: Cashier collects the locked bill
-    note over game : Manager leaves Waiter and Chef at WAIT
-    game -> game : **4 Eating and payment** coordinatePaymentProcessing()
-    opt oldest READY_TO_PAY and 5 > vip.getReadyTurn() (4)
-      game -> cashier : processPayment(vip, restaurant)
-      cashier -> vip : order = getOrder()
-      cashier -> order : bill = getBillCents()
-      note right : 1080: the locked price, not recalculated
-      cashier -> rest : recordPayment(bill)
-      note right : revenue += $10.80\nVIP counts as paid with satisfaction 95
-      cashier -> vip : markPaid()
-      note right : READY_TO_PAY to PAID
-      cashier -> order : markPaid()
-      note right : SERVED to PAID
-      cashier -> rest : releaseTableOf(vip)
-      rest -> t1 : release()
-    end
+  == Turn 5: Cashier collects the locked bill ==
+
+  note over game, cli : Manager leaves Waiter and Chef at WAIT
+  game -> game : **4 Eating and payment** coordinatePaymentProcessing()
+  game -> rest : customers = getCustomers()
+  opt oldest READY_TO_PAY customer is vip and 5 > vip.getReadyTurn() (4)
+    game -> cashier : processPayment(vip, restaurant)
+    cashier -> vip : order = getOrder()
+    cashier -> order : bill = getBillCents()
+    note right : 1080: the locked price,\nnot recalculated
+    cashier -> rest : recordPayment(bill)
+    note right : revenue += $10.80\nvip counts as paid with satisfaction 95
+    cashier -> vip : markPaid()
+    note right : READY_TO_PAY to PAID
+    cashier -> order : markPaid()
+    note right : SERVED to PAID
+    cashier -> rest : releaseTableOf(vip)
+    rest -> t1 : release()
   end
 
   ... turns 6 to 18 run the same six steps for the other customers ...
@@ -219,5 +243,9 @@ game -> rest : revenue = getRevenueCents()
 game -> rest : avg = getAverageSatisfaction()
 note right : won = paid >= 4 and revenue >= 4500\nand avg >= 60 (the game never ends early)
 game -> cli : displayResult(won, restaurant)
-cli -> M : Victory or Defeat
+alt won
+  cli -> M : Victory
+else not won
+  cli -> M : Defeat
+end
 @enduml

@@ -1,0 +1,260 @@
+@startuml
+' ======================================================================
+' SC2002 Restaurant Rush - Stage 1 class diagram (source of truth)
+' Redrawn from stage-1-class.uml (Visual Paradigm model) in the same style
+' as the Stage 2 and Stage 3 diagrams. Every class is new in Stage 1.
+' Render: see docs/diagrams/src/README.md
+' ======================================================================
+!pragma layout smetana
+title Restaurant Rush: Stage 1 class diagram
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 12
+skinparam nodesep 44
+skinparam ranksep 38
+skinparam linetype polyline
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #F6F7F2
+skinparam noteBorderColor #8C8C80
+skinparam noteFontSize 11
+skinparam class {
+  BorderColor #3F6B96
+  BackgroundColor #DCEBF7
+}
+skinparam stereotypeCBackgroundColor transparent
+hide empty members
+hide circle
+
+' ---------- boundary and control ----------
+class RestaurantCLI <<boundary>> {
+  -controller: GameController
+  +readWaiterChoice(): String
+  +readChefChoice(): String
+  +displayTurnStatus(Restaurant): void
+  +displayError(String): void
+  +displayResult(boolean, Restaurant): void
+}
+
+class GameController <<control>> {
+  -restaurant: Restaurant
+  -currentTurn: int
+  -maxTurns: int
+  -cli: RestaurantCLI
+  +startGame(): void
+  -executeTurn(): void
+  -processScheduledArrival(): void
+  -coordinateStaffActions(): void
+  -coordinatePaymentProcessing(): void
+  -processEndOfTurnUpdates(): void
+  -evaluateGameResult(): boolean
+}
+
+' ---------- restaurant and menu ----------
+class Restaurant {
+  -tables: List<Table>
+  -customers: List<Customer>
+  -waitingQueue: Queue<Customer>
+  -waiter: Waiter
+  -chef: Chef
+  -cashier: Cashier
+  -revenueCents: int
+  -menuItems: List<MenuItem>
+  +registerArrival(): void
+  +findAvailableTable(): Table
+  +findOldestEligiblePayer(turn: int): Customer
+  +getWaiter(): Waiter
+  +getChef(): Chef
+  +getCashier(): Cashier
+  +getMenuItems(): List<MenuItem>
+  +getCustomers(): List<Customer>
+  +getWaitingQueue(): Queue<Customer>
+  +recordPayment(): void
+  +releaseTableOf(customer: Customer): void
+  +getPaidCustomerCount(): int
+  +getAverageSatisfaction(): double
+  +getRevenueCents(): int
+  +handleAbandonment(Customer): void
+  +getUnhappyDepartureCount(): int
+}
+
+class MenuItem {
+  -name: String
+  -priceCents: int
+  -preparationUnits: int
+  +getName(): String
+  +getPriceCents(): int
+  +getPreparationUnits(): int
+}
+
+' ---------- staff and table ----------
+class Waiter {
+  +seatCustomer(Customer, Table): void
+  +takeOrder(Customer, MenuItem): void
+  +serveOrder(Customer): void
+}
+
+class Chef {
+  +prepare(Order): void
+}
+
+class Cashier {
+  +processPayment(Customer, Restaurant): void
+}
+
+class Table {
+  -tableId: int
+  -occupant: Customer
+  +isAvailable(): boolean
+  +seat(Customer): void
+  +release(): void
+  +getOccupied(): Customer
+}
+
+' ---------- customer and order ----------
+class Customer {
+  -customerId: int
+  -satisfaction: int
+  -status: CustomerStatus
+  -order: Order
+  -servedTurn: int
+  -readyTurn: int
+  +getId(): int
+  +getStatus(): CustomerStatus
+  +getSatisfaction(): int
+  +chooseMenuItem(): MenuItem
+  +assignOrder(Order): void
+  +getOrder(): Order
+  +markSeated(): void
+  +markServed(turn: int): void
+  +canFinishEating(turn: int): boolean
+  +markReadyToPay(turn: int): void
+  +canPay(turn: int): boolean
+  +markPaid(): void
+  +reduceSatisfaction(): void
+  +shouldAbandon(): boolean
+  +markAbandoned(): void
+}
+
+class Order {
+  -orderId: int
+  -item: MenuItem
+  -completedUnits: int
+  -status: OrderStatus
+  +advancePreparation(): void
+  +isReady(): boolean
+  +markServed(): void
+  +markPaid(): void
+  +cancel(): void
+  +getStatus(): OrderStatus
+  +getPriceCents(): int
+}
+
+enum CustomerStatus #EAF1F7 {
+  WAITING
+  SEATED
+  ORDERED
+  SERVED
+  READY_TO_PAY
+  PAID
+  ABANDONED
+}
+
+enum OrderStatus #EAF1F7 {
+  PLACED
+  PREPARING
+  READY
+  SERVED
+  PAID
+  CANCELLED
+}
+
+' ---------- layout skeleton (hidden links keep the rows tidy) ----------
+Table -[hidden]right- Waiter
+Waiter -[hidden]right- Chef
+Chef -[hidden]right- Cashier
+Cashier -[hidden]right- MenuItem
+Customer -[hidden]right- Order
+Order -[hidden]right- CustomerStatus
+CustomerStatus -[hidden]right- OrderStatus
+
+' ---------- control and boundary ----------
+RestaurantCLI "cli 1" <-down-> "controller 1" GameController
+GameController "1" -down-> "restaurant 1" Restaurant
+RestaurantCLI .down.> Restaurant : displays
+
+' ---------- composition (Restaurant owns these) ----------
+Restaurant "1" *-down- "2" Table : tables
+Restaurant "1" *-down- "1" Waiter : waiter
+Restaurant "1" *-down- "1" Chef : chef
+Restaurant "1" *-down- "1" Cashier : cashier
+
+' ---------- aggregation (customers arrive and leave; menu items are shared) ----------
+Restaurant "1" o-down- "0..*" Customer : customers
+Restaurant "1" o-down- "0..*" Customer : waitingQueue\n{ordered, FIFO}
+Restaurant "1" o-down- "3" MenuItem : menuItems
+
+' ---------- domain associations ----------
+Customer "0..1" -up- "1" Table : occupant
+Customer "1" -right-> "0..1" Order
+Order "0..*" -right-> "1" MenuItem
+Customer -down-> CustomerStatus : status
+Order -down-> OrderStatus : status
+
+' ---------- dependencies ----------
+Waiter .left.> Table
+Waiter .down.> Customer : seats / serves
+Waiter .down.> Order : creates
+Waiter .down.> MenuItem : reads
+Chef .down.> Order : advances
+Cashier .down.> Customer : charges
+Cashier .up.> Restaurant : recordPayment,\nreleaseTableOf
+
+' ---------- annotations ----------
+note top of Restaurant
+  <b>COMPOSITION</b>
+  Restaurant creates and owns its Tables and staff;
+  they exist only as part of one Restaurant.
+  Customers are aggregated: they arrive and leave.
+  The waitingQueue and customers links both point
+  at Customer. Stage 1 has only Regular customers.
+end note
+
+note bottom of Order
+  <b>ENCAPSULATION</b>
+  status is private and changes only through
+  advancePreparation(), markServed(), markPaid(),
+  cancel(); illegal transitions are rejected.
+  Legal: PLACED → PREPARING → READY → SERVED → PAID
+  (PLACED → READY directly for a 1-unit dish);
+  PLACED / PREPARING / READY → CANCELLED if the
+  customer leaves. The price is read from the item.
+end note
+
+note bottom of CustomerStatus
+  <b>CUSTOMER LIFECYCLE</b>
+  WAITING → SEATED → ORDERED → SERVED →
+  READY_TO_PAY → PAID; WAITING / SEATED / ORDERED
+  → ABANDONED when satisfaction reaches 0.
+  Served, eating and READY_TO_PAY customers
+  lose no satisfaction.
+end note
+
+note left of Customer
+  <b>ENCAPSULATION</b>
+  satisfaction and status are private and change only
+  through reduceSatisfaction() and the mark...() methods.
+  <b>TURN GUARDS</b>
+  canFinishEating(turn): one full turn after serving.
+  canPay(turn): only after the READY_TO_PAY turn.
+  Regular customers lose 8 per waiting turn.
+end note
+
+note right of Waiter
+  <b>STAFF ROLES</b>
+  One class per role: the Waiter seats, takes orders
+  and serves; the Chef prepares; the Cashier takes
+  payment. Each does at most one task per turn.
+end note
+@enduml
