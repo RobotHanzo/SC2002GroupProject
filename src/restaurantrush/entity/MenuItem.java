@@ -1,7 +1,7 @@
 package restaurantrush.entity;
 
 /** A dish on the menu. Immutable: name, price in cents and the preparation units the Chef must spend. */
-public final class MenuItem {
+public class MenuItem {
     private final String name;
     private final int priceCents;
     private final int preparationUnits;
