@@ -329,13 +329,13 @@ Restaurant "1" *-down- "1" Menu : menu
 ' ---------- aggregation (customers arrive and leave) ----------
 ' Multiplicities at the Customer end sit in the labels: three links meet at Customer's corner and end labels would overlap there.
 Restaurant "1" o-down- Customer : customers [0..*]
-Restaurant "1" o-down- Customer : waitingQueue [0..*]\n{ordered, FIFO}
+Restaurant "1" o-down- Customer : waitingQueue [0..*]\n{ordered}
 
 ' ---------- menu ----------
 Menu "1" o-down- "3" MenuItem : items
 
 ' ---------- domain associations ----------
-Table "1" -down-> Customer : occupant [0..1]
+Table "0..1" -down-> Customer : occupant [0..1]
 Customer "1" -right-> Order : order [0..1]
 Order "0..*" -right-> "1" MenuItem
 Customer -down-> CustomerStatus : status

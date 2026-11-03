@@ -76,18 +76,18 @@ final class StaffActions {
     }
 
     private String serve(ManagerCommand command, int currentTurn) {
-        Customer customer = command.select(restaurant.getCustomersWithStatus(CustomerStatus.ORDERED),
-                restaurant.getCustomers(), "no customer has an order to serve",
-                "only a customer who has ordered can be served");
+        Customer customer = command.select(restaurant.getCustomersToServe(),
+                restaurant.getCustomers(), "no READY order is waiting to be served",
+                "only a customer with a READY order can be served");
         restaurant.getWaiter().serveOrder(customer, currentTurn);
         return "Waiter serves the " + customer.getOrder().getItem().getName() + " to "
                 + customer.getDisplayName() + ".";
     }
 
     private String cook(ManagerCommand command) {
-        Customer customer = command.select(restaurant.getCustomersWithStatus(CustomerStatus.ORDERED),
-                restaurant.getCustomers(), "no order has been taken yet",
-                "only a customer who has ordered has food to prepare");
+        Customer customer = command.select(restaurant.getCustomersToCook(),
+                restaurant.getCustomers(), "no unfinished order needs preparation",
+                "only a customer with an unfinished order has food to prepare");
         Order order = customer.getOrder();
         restaurant.getChef().prepare(order);
         return "Chef works on the " + order.getItem().getName() + " for " + customer.getDisplayName()

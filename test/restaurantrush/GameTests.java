@@ -82,6 +82,7 @@ public final class GameTests {
         defeatRunIsReproducible();
         invalidChoicesDoNotUseUpTheTask();
         happyHourIsOfferedAgainAfterBeingDeclined();
+        commandsWithoutNumbersSelectOnlyEligibleCustomers();
         System.out.println(passed + " checks passed, " + failed + " failed");
         System.exit(failed == 0 ? 0 : 1);
     }
@@ -518,6 +519,40 @@ public final class GameTests {
         check("accepting it on turn 2 switches it on for that turn and the next",
                 transcript.contains("Happy Hour is ON: orders taken now get a discount and waiting customers recover "
                         + "satisfaction. Turns left: 2."));
+    }
+
+    private static void commandsWithoutNumbersSelectOnlyEligibleCustomers() {
+        // By turn 5, #1's Burger is READY and #2's Pasta is still PREPARING.
+        String mixedOrders = "y\nSEAT 1\nTAKE_ORDER 1\nCOOK 1\n"
+                + "WAIT\nWAIT\nWAIT\n"
+                + "WAIT\nWAIT\nWAIT\n"
+                + "SEAT 2\nTAKE_ORDER 2\nCOOK 2\n"
+                + "WAIT\n";
+        String serving = playText(mixedOrders + "SERVE\nWAIT\n");
+        check("SERVE without a number selects the only READY order, ignoring a PREPARING order",
+                serving.contains("Waiter serves the Burger to Customer #1 (VIP).")
+                        && !serving.contains("Not possible:"));
+
+        String cooking = playText(mixedOrders + "WAIT\nCOOK\n");
+        check("COOK without a number selects the only unfinished order, ignoring a READY order",
+                cooking.contains("Chef works on the Pasta for Customer #2 (Regular): 2/2 units, order is READY.")
+                        && !cooking.contains("Not possible:"));
+
+        String rejectedServe = playText(mixedOrders + "SERVE 2\nSERVE\nWAIT\n");
+        check("an explicit SERVE of an unfinished order is explained and can be corrected in the same turn",
+                rejectedServe.contains("only a customer with a READY order can be served. Choose again.")
+                        && count(rejectedServe, "Waiter serves the Burger to Customer #1 (VIP).") == 1);
+
+        String rejectedCook = playText(mixedOrders + "WAIT\nCOOK 1\nCOOK\n");
+        check("an explicit COOK of a READY order is explained and can be corrected in the same turn",
+                rejectedCook.contains("only a customer with an unfinished order has food to prepare. Choose again.")
+                        && count(rejectedCook,
+                                "Chef works on the Pasta for Customer #2 (Regular): 2/2 units, order is READY.") == 1);
+
+        String twoReady = playText(mixedOrders + "WAIT\nCOOK\nWAIT\nSERVE\nSERVE 2\nWAIT\n");
+        check("SERVE still asks for a number when two orders are READY",
+                twoReady.contains("Several customers qualify (#1, #2)")
+                        && twoReady.contains("Waiter serves the Pasta to Customer #2 (Regular)."));
     }
 
     // ---- Stage 3 clean-up ------------------------------------------------------------------

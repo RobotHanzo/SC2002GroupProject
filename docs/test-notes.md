@@ -17,7 +17,7 @@ javac --release 17 -d out -sourcepath src test/restaurantrush/GameTests.java
 java -cp out restaurantrush.GameTests
 ```
 
-Expected: `189 checks passed, 0 failed`. The checks cover:
+Expected: `194 checks passed, 0 failed`. The checks cover:
 
 - **Stage 1 and 2 rules that must still hold**: order status rules, the Regular's loss of 8, the turn guards, tables, payment, abandonment, loss per waiting turn for Regular, VIP and Critic (8, 5, 12), the VIP's 10% discount, the locked bill, the Critic's food and late-service penalty, the six arrivals (including a VIP and a Critic), and that `GameController`, `StaffActions` and `ManagerCommand` contain no type checks. The food-rule checks that assume three dishes build that three-dish menu explicitly, because the Stage 3 menu has five entries;
 - **ComboMeal**: Salad + Burger $21.60 and 2 units, Salad + Pasta $24.30 and 3 units, Burger + Pasta $29.70 and 3 units; a combo holds its two component items and is a `MenuItem`; a 3-unit combo is READY only after 3 units; the menu has five entries (the three dishes and two combos built from the menu's own dishes); Regular and VIP choose by `customerId mod 5`, the Critic takes the Salad + Pasta combo;
@@ -25,6 +25,7 @@ Expected: `189 checks passed, 0 failed`. The checks cover:
 - **Host**: seats a queued customer, refuses an occupied table or a customer who is not waiting without changing anything, and the Waiter can still seat;
 - **Stage 3 clean-up** (no behaviour change): the waiting queue is read-only and keeps arrival order; `seatFromQueue` removes a customer from it only after the Waiter or Host accepted the seating, and a rejected seating leaves the customer in the queue; `Restaurant` reports who can be seated, cooked for or served (and nobody can be seated while both tables are occupied); `hasMetObjective()` is false until 4 customers have paid and true at 4 paid, $72.00 and satisfaction 100; `RestaurantCLI` does not use the controller or recompute the staff-task rules; `Order` has no static mutable state. The replays of the recorded runs and an invalid-input session print the same transcripts as before the clean-up;
 - **The recorded runs below**: results, Happy Hour offered only until used (and offered again after being declined), the Host seating while the Waiter takes the order in the same turn, rejected choices explained and followed by another prompt in the same turn.
+- **Command selection regression**: with one READY order and one PREPARING order, `SERVE` and `COOK` without a customer number select only the customer eligible for that task. Explicit requests to serve an unfinished order or cook a READY order are rejected without consuming the task; two READY orders still require a customer number for `SERVE`.
 
 ### Reference values from the brief
 

@@ -76,7 +76,7 @@ loop for each turn 1..18 (turns 1-5 shown)
     sched --> vip : <<create>>
     note right : status WAITING,\nsatisfaction 100
     game -> rest : registerArrival(vip)
-    note right : vip joins\nwaitingQueue (FIFO)
+    note right : vip joins\nwaitingQueue (arrival order)
   end
   game -> cli : displayTurnStatus(restaurant, 1, 18)
 
@@ -190,8 +190,8 @@ loop for each turn 1..18 (turns 1-5 shown)
   game -> cmd : cmd = parse(chefChoice)
   game -> staff : message = chef(cmd)
   opt cmd.getVerb() == COOK
-    staff -> rest : ordered = getCustomersWithStatus(ORDERED)
-    staff -> cmd : vip = select(ordered, customers, ...)
+    staff -> rest : unfinished = getCustomersToCook()
+    staff -> cmd : vip = select(unfinished, customers, ...)
     staff -> vip : order = getOrder()
     staff -> chef : prepare(order)
     chef -> order : advancePreparation()
@@ -219,11 +219,12 @@ loop for each turn 1..18 (turns 1-5 shown)
     game -> cmd : cmd = parse(choice)
     game -> staff : message = waiter(cmd, 3)
     opt cmd.getVerb() == SERVE
-      staff -> rest : ordered = getCustomersWithStatus(ORDERED)
-      staff -> cmd : vip = select(ordered, customers, ...)
-      staff -> waiter : serveOrder(vip, 3)
-      waiter -> order : ready = isReady()
-      alt ready (finished on turn 2)
+      staff -> rest : readyCustomers = getCustomersToServe()
+      staff -> cmd : vip = select(readyCustomers, customers, ...)
+      alt a READY customer is selected (finished on turn 2)
+        staff -> waiter : serveOrder(vip, 3)
+        waiter -> order : ready = isReady()
+        note right : true: candidate selection requires READY;\nthe Waiter also checks defensively
         waiter -> order : markServed()
         note right : READY to SERVED
         waiter -> vip : markServed(3)
@@ -233,8 +234,8 @@ loop for each turn 1..18 (turns 1-5 shown)
         note right : polymorphic hook: Critic loses 10 if served\nmore than 2 turns after ordering;\nVIP does nothing
         staff --> game : "Waiter serves the Burger to Customer #1 (VIP)."
         game -> cli : displayMessage(message)
-      else not READY (for example, SERVE tried on turn 2)
-        waiter --> staff : throws "order is not READY yet"
+      else invalid selection (for example, an unfinished order)
+        cmd --> staff : throws "only a customer with a READY order can be served"
         staff --> game : the exception passes through
         game -> cli : displayError(reason)
         note right : staff task is not used up,\nthe manager chooses again
