@@ -31,8 +31,11 @@ skinparam sequenceLifeLineBorderColor #999999
 skinparam ArrowColor #222222
 
 actor Manager as M order 10
+participant "main : Main" as main order 15
 boundary "cli : RestaurantCLI" as cli order 20
 control "game : GameController" as game order 30
+control "staff : StaffActions" as staff order 33
+control "cmd : ManagerCommand" as cmd order 36
 entity "schedule : ArrivalSchedule" as sched order 40
 entity "restaurant : Restaurant" as rest order 50
 entity "hh : HappyHour" as hh order 60
@@ -54,9 +57,12 @@ note over M, rest
   it seats customer 2, who is not traced further.
 end note
 
-M -> cli : start game
-cli -> game : startGame()
-note right of game : GameController holds only the restaurant. Whenever it needs the\nHappyHour, the Menu or a staff member it takes it from the Restaurant\ngetter (getHappyHour(), getMenu(), getWaiter() ...); those calls are not drawn
+M -> main : run the game
+main -> cli : <<create>> RestaurantCLI(in, out, echoInput)
+main -> game : <<create>> GameController(cli)
+note right of game : The constructor also creates the Restaurant, the ArrivalSchedule and StaffActions.\nStaffActions takes the HappyHour, the Menu or a staff member from the Restaurant\ngetters (getHappyHour(), getMenu(), getWaiter() ...); those calls are not drawn.\nEvery choice is read with ManagerCommand.parse(choice) (drawn where a task is done)
+main -> game : startGame()
+game -> cli : displayIntro(18)
 
 loop for each turn 1..18 (turns 1-5 shown)
 
@@ -72,7 +78,7 @@ loop for each turn 1..18 (turns 1-5 shown)
     game -> rest : registerArrival(vip)
     note right : vip joins\nwaitingQueue (FIFO)
   end
-  game -> cli : displayTurnStatus(restaurant)
+  game -> cli : displayTurnStatus(restaurant, 1, 18)
 
   game -> game : **Start of turn** processHappyHourActivation()
   game -> hh : available = isAvailable()
@@ -110,15 +116,22 @@ loop for each turn 1..18 (turns 1-5 shown)
   game -> cli : choice = readWaiterChoice()
   cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
   M --> cli : SEAT
-  opt choice == SEAT
-    game -> rest : t1 = findAvailableTable()
-    game -> waiter : seatCustomer(vip, t1)
+  game -> cmd : cmd = parse(choice)
+  game -> staff : message = waiter(cmd, 1)
+  opt cmd.getVerb() == SEAT
+    staff -> rest : queue = getWaitingQueue()
+    staff -> cmd : vip = select(queue, customers, ...)
+    note right : no number typed and one candidate:\nthe VIP is chosen
+    staff -> rest : t1 = findAvailableTable()
+    staff -> rest : seatFromQueue(vip, t1, waiter::seatCustomer)
+    rest -> waiter : seatCustomer(vip, t1)
     waiter -> t1 : seat(vip)
     waiter -> vip : markSeated()
     note right : WAITING to SEATED
-    game -> rest : getWaitingQueue().remove(vip)
-    note right : vip leaves the waitingQueue
+    note over rest : only after the Waiter accepted: vip leaves the waitingQueue
   end
+  staff --> game : "Waiter seats Customer #1 (VIP) at Table 1."
+  game -> cli : displayMessage(message)
   note over game, cli : Chef: manager picks WAIT (no order exists yet)
 
   game -> game : **5 Waiting and abandonment** processEndOfTurnUpdates()
@@ -151,8 +164,12 @@ loop for each turn 1..18 (turns 1-5 shown)
   game -> cli : choice = readWaiterChoice()
   cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
   M --> cli : TAKE_ORDER
-  opt choice == TAKE_ORDER
-    game -> waiter : order = takeOrder(vip, menu, hh, 2)
+  game -> cmd : cmd = parse(choice)
+  game -> staff : message = waiter(cmd, 2)
+  opt cmd.getVerb() == TAKE_ORDER
+    staff -> rest : seated = getCustomersWithStatus(SEATED)
+    staff -> cmd : vip = select(seated, customers, ...)
+    staff -> waiter : order = takeOrder(vip, menu, hh, 2)
     waiter -> vip : item = chooseMenuItem(menu)
     note right : documented rule: Burger\n(1500 cents, 1 unit)
     waiter -> vip : bill = calculateBillCents(1500)
@@ -165,14 +182,23 @@ loop for each turn 1..18 (turns 1-5 shown)
     waiter -> vip : assignOrder(order)
     note right : SEATED to ORDERED
   end
+  staff --> game : "Waiter takes the order ... Bill locked at $10.80."
+  game -> cli : displayMessage(message)
   game -> cli : chefChoice = readChefChoice()
   cli -> M : Chef: choose an order or WAIT?
-  M --> cli : the VIP's order
-  opt chefChoice is an order
-    game -> chef : prepare(order)
+  M --> cli : COOK 1 (the VIP's order)
+  game -> cmd : cmd = parse(chefChoice)
+  game -> staff : message = chef(cmd)
+  opt cmd.getVerb() == COOK
+    staff -> rest : ordered = getCustomersWithStatus(ORDERED)
+    staff -> cmd : vip = select(ordered, customers, ...)
+    staff -> vip : order = getOrder()
+    staff -> chef : prepare(order)
     chef -> order : advancePreparation()
     note right : Burger 1/1 unit: PLACED to READY.\nWaiter already acted this turn:\nserved on turn 3 at the earliest
   end
+  staff --> game : "Chef works on the Burger ... order is READY."
+  game -> cli : displayMessage(message)
 
   game -> game : **5 Waiting and abandonment** processEndOfTurnUpdates()
   loop for each customer where isAwaitingService()
@@ -190,8 +216,12 @@ loop for each turn 1..18 (turns 1-5 shown)
     game -> cli : choice = readWaiterChoice()
     cli -> M : Waiter: SEAT, TAKE_ORDER, SERVE or WAIT?
     M --> cli : SERVE
-    opt choice == SERVE
-      game -> waiter : serveOrder(vip, 3)
+    game -> cmd : cmd = parse(choice)
+    game -> staff : message = waiter(cmd, 3)
+    opt cmd.getVerb() == SERVE
+      staff -> rest : ordered = getCustomersWithStatus(ORDERED)
+      staff -> cmd : vip = select(ordered, customers, ...)
+      staff -> waiter : serveOrder(vip, 3)
       waiter -> order : ready = isReady()
       alt ready (finished on turn 2)
         waiter -> order : markServed()
@@ -201,8 +231,11 @@ loop for each turn 1..18 (turns 1-5 shown)
         waiter -> order : turnTaken = getTurnTaken()
         waiter -> vip : onServed(3 - turnTaken)
         note right : polymorphic hook: Critic loses 10 if served\nmore than 2 turns after ordering;\nVIP does nothing
+        staff --> game : "Waiter serves the Burger to Customer #1 (VIP)."
+        game -> cli : displayMessage(message)
       else not READY (for example, SERVE tried on turn 2)
-        waiter --> game : rejects: "order is not READY yet"
+        waiter --> staff : throws "order is not READY yet"
+        staff --> game : the exception passes through
         game -> cli : displayError(reason)
         note right : staff task is not used up,\nthe manager chooses again
       end
@@ -221,17 +254,22 @@ loop for each turn 1..18 (turns 1-5 shown)
     game -> rest : registerArrival(c2)
     note right : customer 2 joins the waitingQueue\n(created as in turn 1; type set by the schedule)
   end
-  game -> cli : displayTurnStatus(restaurant)
+  game -> cli : displayTurnStatus(restaurant, 4, 18)
 
   game -> game : **2 Manager choices (Host)** coordinateHostAction()
   game -> cli : hostChoice = readHostChoice()
   cli -> M : Host: SEAT or WAIT?
   M --> cli : SEAT
-  opt hostChoice == SEAT
-    game -> rest : t2 = findAvailableTable()
-    game -> host : seatCustomer(c2, t2)
-    note right : Host.seatCustomer(c2, t2): markSeated() and Table.seat(c2), then\nc2 leaves the waitingQueue. The Waiter's task is not used
+  game -> cmd : cmd = parse(hostChoice)
+  game -> staff : message = host(cmd)
+  opt cmd.getVerb() == SEAT
+    staff -> rest : c2 = the only queued customer (select), t2 = findAvailableTable()
+    staff -> rest : seatFromQueue(c2, t2, host::seatCustomer)
+    rest -> host : seatCustomer(c2, t2)
+    note right : Host.seatCustomer(c2, t2): markSeated() and Table.seat(c2), then Restaurant\nremoves c2 from the waitingQueue. The Waiter's task is not used
   end
+  staff --> game : "Host seats Customer #2 (Regular) at Table 2."
+  game -> cli : displayMessage(message)
   note over game, cli : Waiter and Chef: manager picks WAIT
 
   game -> game : **4 Eating and payment** coordinatePaymentProcessing()
@@ -274,12 +312,9 @@ loop for each turn 1..18 (turns 1-5 shown)
   ... turns 6 to 18 run the same six steps for the other customers ...
 end
 
-game -> game : **6 Result** evaluateGameResult()
-game -> rest : paid = getPaidCustomerCount()
-game -> rest : revenue = getRevenueCents()
-game -> rest : avg = getAverageSatisfaction()
-note right : won = paid >= 4 and revenue >= 4500\nand avg >= 60 (the game never ends early)
-game -> cli : displayResult(won, restaurant)
+game -> rest : **6 Result** won = hasMetObjective()
+note right : paid customers >= 4 and revenue >= 4500\nand average satisfaction >= 60, from its own books\n(the game never ends early)
+game -> cli : displayResult(won, restaurant, 18)
 alt won
   cli -> M : Victory
 else not won

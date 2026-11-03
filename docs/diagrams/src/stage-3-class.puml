@@ -30,29 +30,34 @@ hide circle
 
 ' ---------- boundary and control ----------
 class RestaurantCLI <<boundary>> #FAE8A6 {
-  -controller: GameController
   -input: Scanner
   -out: PrintStream
-  +start(): void
+  -echoInput: boolean
+  +displayIntro(maxTurns: int): void
   +readWaiterChoice(): String
   +readChefChoice(): String
   +readHostChoice(): String
   +readHappyHourChoice(): boolean
-  +displayTurnStatus(Restaurant): void
+  +displayTurnStatus(Restaurant, turn: int, maxTurns: int): void
   +displayMessage(String): void
   +displayError(String): void
-  +displayResult(boolean, Restaurant): void
+  +displayResult(boolean, Restaurant, turnsUsed: int): void
+  +displayInputEnded(): void
+}
+
+class Main <<entry point>> #FAE8A6 {
+  +main(args: String[]): void
+  +play(in: InputStream, out: PrintStream, echoInput: boolean): void
 }
 
 class GameController <<control>> #FAE8A6 {
   -restaurant: Restaurant
   -schedule: ArrivalSchedule
+  -staff: StaffActions
   -currentTurn: int
   -maxTurns: int
   -cli: RestaurantCLI
   +startGame(): void
-  +getCurrentTurn(): int
-  +getMaxTurns(): int
   -executeTurn(): void
   -processHappyHourActivation(): void
   -applyHappyHourRecovery(): void
@@ -61,7 +66,25 @@ class GameController <<control>> #FAE8A6 {
   -coordinateHostAction(): void
   -coordinatePaymentProcessing(): void
   -processEndOfTurnUpdates(): void
-  -evaluateGameResult(): boolean
+}
+
+class StaffActions <<control>> #CCEBD2 {
+  -restaurant: Restaurant
+  ~host(ManagerCommand): Optional<String>
+  ~waiter(ManagerCommand, currentTurn: int): Optional<String>
+  ~chef(ManagerCommand): Optional<String>
+  -seat(ManagerCommand, BiConsumer<Customer, Table>, actor: String): String
+  -takeOrder(ManagerCommand, currentTurn: int): String
+  -serve(ManagerCommand, currentTurn: int): String
+  -cook(ManagerCommand): String
+}
+
+class ManagerCommand <<control>> #CCEBD2 {
+  -verb: String
+  -customerId: Integer
+  {static} ~parse(raw: String): ManagerCommand
+  ~getVerb(): String
+  ~select(candidates: List<Customer>, everyone: List<Customer>,\n    noCandidates: String, ineligible: String): Customer
 }
 
 class ArrivalSchedule {
@@ -74,9 +97,12 @@ class ArrivalSchedule {
 
 ' ---------- restaurant and policies ----------
 class Restaurant #FAE8A6 {
+  {static} +REQUIRED_PAID_CUSTOMERS: int = 4
+  {static} +REQUIRED_REVENUE_CENTS: int = 4500
+  {static} +REQUIRED_AVERAGE_SATISFACTION: int = 60
   -tables: List<Table>
   -customers: List<Customer>
-  -waitingQueue: Queue<Customer>
+  -waitingQueue: List<Customer>
   -menu: Menu
   -happyHour: HappyHour
   -waiter: Waiter
@@ -94,7 +120,12 @@ class Restaurant #FAE8A6 {
   +getCashier(): Cashier
   +getHost(): Host
   +getCustomers(): List<Customer>
-  +getWaitingQueue(): Queue<Customer>
+  +getWaitingQueue(): List<Customer>
+  +seatFromQueue(Customer, Table, BiConsumer<Customer, Table>): void
+  +getCustomersWithStatus(CustomerStatus): List<Customer>
+  +getSeatableCustomers(): List<Customer>
+  +getCustomersToServe(): List<Customer>
+  +getCustomersToCook(): List<Customer>
   +recordPayment(amountCents: int): void
   +releaseTableOf(Customer): void
   +getPaidCustomerCount(): int
@@ -103,6 +134,7 @@ class Restaurant #FAE8A6 {
   +getRevenueCents(): int
   +handleAbandonment(Customer): void
   +getUnhappyDepartureCount(): int
+  +hasMetObjective(): boolean
 }
 
 class HappyHour #CCEBD2 {
@@ -185,6 +217,7 @@ abstract class Customer #FAE8A6 {
   +getStatus(): CustomerStatus
   +getSatisfaction(): int
   {abstract} +getTypeLabel(): String
+  +getDisplayName(): String
   +chooseMenuItem(Menu): MenuItem
   +calculateBillCents(basePriceCents: int): int
   {abstract} #getSatisfactionLoss(): int
@@ -225,8 +258,7 @@ class CriticCustomer {
   +onServed(turnsWaited: int): void
 }
 
-class Order {
-  -orderId: int
+class Order #FAE8A6 {
   -item: MenuItem
   -completedUnits: int
   -status: OrderStatus
@@ -265,7 +297,10 @@ enum OrderStatus #EAF1F7 {
 ' ---------- layout skeleton (hidden links keep the rows tidy) ----------
 ' Smetana cannot route labelled same-rank links, so sideways links carry no mid-link label.
 Restaurant -[hidden]right- GameController
-GameController -[hidden]right- ArrivalSchedule
+GameController -[hidden]right- StaffActions
+StaffActions -[hidden]right- ManagerCommand
+RestaurantCLI -[hidden]right- ArrivalSchedule
+Main -[hidden]right- RestaurantCLI
 Host -[hidden]right- Table
 Table -[hidden]right- Waiter
 Waiter -[hidden]right- Chef
@@ -278,9 +313,13 @@ VIPCustomer -[hidden]right- CriticCustomer
 CriticCustomer -[hidden]right- CustomerStatus
 
 ' ---------- control and boundary ----------
-RestaurantCLI "cli 1" <-down-> "controller 1" GameController
-GameController "1" -right-> "schedule 1" ArrivalSchedule
+Main .down.> RestaurantCLI : <<create>>
+Main .right.> GameController : <<create>>
+GameController "1" -up-> "cli 1" RestaurantCLI
+GameController "1" -up-> "schedule 1" ArrivalSchedule
+GameController "1" -right-> "staff 1" StaffActions
 GameController "1" -left-> "restaurant 1" Restaurant
+StaffActions .right.> ManagerCommand
 RestaurantCLI .down.> Restaurant : displays
 ArrivalSchedule .down.> Customer : <<create>>\nRegular, VIP, Critic
 
@@ -315,12 +354,15 @@ Customer <|-down- VIPCustomer
 Customer <|-down- CriticCustomer
 
 ' ---------- dependencies ----------
-GameController .[#777777].> Waiter
-GameController .[#777777].> Host
-GameController .[#777777].> Chef
 GameController .[#777777].> Cashier
 GameController .[#777777].> HappyHour
 GameController .[#777777].> Customer
+StaffActions .[#777777].> Restaurant
+StaffActions .[#777777].> Waiter
+StaffActions .[#777777].> Host
+StaffActions .[#777777].> Chef
+StaffActions .[#777777].> Customer
+ManagerCommand .[#777777].> Customer
 Host .right.> Table
 Waiter .left.> Table
 Host .down.> Customer : seats
@@ -342,6 +384,18 @@ note top of Restaurant
   one Restaurant. Customers are aggregated:
   they arrive and leave. The waitingQueue and
   customers links both point at Customer.
+end note
+
+note right of StaffActions
+  <b>RESPONSIBILITY SPLIT</b>
+  GameController only sequences the six steps.
+  ManagerCommand reads one typed choice.
+  StaffActions carries it out with the Host, Waiter
+  or Chef and returns the sentence to show; the
+  staff and domain objects reject what is illegal.
+  Restaurant answers what each staff member can do
+  now (getSeatableCustomers(), getCustomersToServe(),
+  getCustomersToCook()), so RestaurantCLI only prints.
 end note
 
 note bottom of Order
@@ -389,6 +443,13 @@ note right of Waiter
   the new Order. VIP Burger: 1500, 1350, 1080 cents.
 end note
 
+note bottom of Restaurant
+  <b>ENCAPSULATION</b>
+  getWaitingQueue() is read-only; a customer leaves the
+  queue only through seatFromQueue(), after the Waiter
+  or Host has accepted the seating.
+end note
+
 note right of HappyHour
   <b>HAPPY HOUR</b>
   Once per game, at turn start; active for that turn
@@ -425,13 +486,19 @@ legend left
   <back:#CCEBD2>  green  </back> new in Stage 3
   <back:#FAE8A6>  yellow  </back> changed since Stage 2
   <back:#DCEBF7>  blue  </back> unchanged
-  <b>Changed since Stage 2</b> (nothing removed)
-  Customer: + recoverSatisfaction(); isAwaitingService()
-    is now public
+  <b>Changed since Stage 2</b>
+  Customer: + recoverSatisfaction(), getDisplayName();
+    isAwaitingService() is now public
   Waiter: takeOrder(...) also takes HappyHour
   MenuItem: no longer final (ComboMeal extends it)
-  Restaurant: + host, happyHour and their getters; the
-    menu now holds two ComboMeals
-  GameController, RestaurantCLI: Host and Happy Hour steps
+  Restaurant: + host, happyHour, two ComboMeals on the
+    menu; read-only waitingQueue with seatFromQueue(),
+    staff task queries, hasMetObjective()
+  Order: orderId and its static counter removed
+  GameController: Host and Happy Hour steps; command
+    parsing and task execution moved to ManagerCommand
+    and StaffActions
+  RestaurantCLI: Host and Happy Hour prompts; no longer
+    references GameController (Main wires them)
 end legend
 @enduml
