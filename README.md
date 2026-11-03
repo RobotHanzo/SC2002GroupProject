@@ -133,7 +133,7 @@ The Stage 2 commits are `efec627`, `69a34cb`, `bc1cd9f` and `10f4b5e` plus the d
 
 Compare: https://github.com/RobotHanzo/SC2002GroupProject/compare/stage-2...stage-3
 
-The Stage 3 commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d210d3` and `a6e64d3` plus the diagram and documentation commits after them.
+The Stage 3 feature commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d210d3` and `a6e64d3`. They are followed by the diagram and documentation commits and by one clean-up commit, `74c50eb`, with its diagram commit `ba84062` (see "Stage 3 clean-up" below).
 
 **New files**
 
@@ -142,25 +142,31 @@ The Stage 3 commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d210d3` an
 | `entity/ComboMeal.java` | A menu item made of two existing menu items (composition); computes the 90% price and the summed preparation units |
 | `entity/HappyHour.java` | The pricing policy: once per game, two turns, 20% off new orders, +15 satisfaction for waiting customers |
 | `entity/Host.java` | The new staff role: seats one queued customer per turn on top of the Waiter's task |
+| `control/ManagerCommand.java` | Clean-up: reads one typed manager choice (a verb and an optional customer number) and picks the customer it refers to |
+| `control/StaffActions.java` | Clean-up: carries out a Host, Waiter or Chef command and returns the sentence to show; an impossible command throws before anything changes |
 
 **Existing files changed, and why**
 
 | File | Change | Reason |
 |---|---|---|
 | `entity/MenuItem.java` | No longer `final` (one word) | `ComboMeal` extends it, so Waiter, Chef, Cashier, Menu and Order treat a combo like any dish and need no change |
-| `entity/Customer.java` | Added `recoverSatisfaction`; `isAwaitingService()` became public | Happy Hour recovery and the controller select customers who are still waiting. The existing satisfaction clamp (`adjustSatisfaction`) is reused |
+| `entity/Customer.java` | Added `recoverSatisfaction`; `isAwaitingService()` became public; clean-up: added `getDisplayName()` | Happy Hour recovery and the controller select customers who are still waiting. The existing satisfaction clamp (`adjustSatisfaction`) is reused. `getDisplayName()` gives every message one way to name a customer |
 | `entity/Waiter.java` | `takeOrder` also takes the `HappyHour` and applies it after the customer's own price | Happy Hour is applied after the VIP discount and locked in the Order. Seating, serving and the Critic hook are untouched |
-| `entity/Restaurant.java` | Owns a `Host` and a `HappyHour` (with getters); the menu now lists two combos | Registration of the new classes and of the combos, once, at set-up. Queue, table, payment and abandonment logic is untouched |
-| `control/GameController.java` | New steps before the staff choices: Happy Hour activation and recovery, and the Host choice; `HappyHour.endTurn()` at the end of the turn; the waiting loop uses `isAwaitingService()` | The Stage 3 turn needs these steps. The Waiter and Chef logic, payment and result rule are untouched |
-| `boundary/RestaurantCLI.java` | Host and Happy Hour prompts, Happy Hour status line, Host task line | Display and input only |
+| `entity/Restaurant.java` | Owns a `Host` and a `HappyHour` (with getters); the menu now lists two combos. Clean-up: `getWaitingQueue()` is read-only and `seatFromQueue` is the only way out of the queue; `getCustomersWithStatus`, `getSeatableCustomers`, `getCustomersToServe` and `getCustomersToCook` say what each staff member can do now; the three victory targets and `hasMetObjective()` | Registration of the new classes and of the combos, once, at set-up. The clean-up gives the queue and the staff-task rules one owner: the controller used to remove customers from the live queue itself, and the screen and the controller each worked out what a staff member can do. Payment and abandonment logic is untouched |
+| `entity/Order.java` | Clean-up: removed the unused `orderId` and its static counter | Nothing read the id, and a static counter is global state shared by every game. Status rules and the locked bill are untouched |
+| `control/GameController.java` | New steps before the staff choices: Happy Hour activation and recovery, and the Host choice; `HappyHour.endTurn()` at the end of the turn; the waiting loop uses `isAwaitingService()`. Clean-up: command parsing and task execution moved to `ManagerCommand` and `StaffActions`; the result check moved to `Restaurant.hasMetObjective()` | The Stage 3 turn needs the new steps. The clean-up leaves the controller sequencing the six steps (324 to 150 lines). The Waiter and Chef logic, payment and result rule are unchanged |
+| `boundary/RestaurantCLI.java` | Host and Happy Hour prompts, Happy Hour status line, Host task line. Clean-up: no longer references `GameController`; the turn number and targets are passed in; the task lines print what `Restaurant` reports | Display and input only. Boundary and control no longer depend on each other |
+| `Main.java` | Clean-up: creates the CLI and the controller (`Main.play`) and handles the end of the input | So that `RestaurantCLI` does not need the controller |
 | `runs/victory.txt`, `runs/defeat.txt` | Replaced | There are two more prompts (Happy Hour and Host), and the menu changes what customers order. The Stage 2 runs are in the `stage-2` tag |
 | `test/restaurantrush/GameTests.java` | Extended | See below |
 
-**Unchanged:** `Menu`, `Order`, `Table`, `Chef`, `Cashier`, `ArrivalSchedule`, `RegularCustomer`, `VIPCustomer`, `CriticCustomer`, the enums, `Money`, `Main`.
+**Unchanged:** `Menu`, `Table`, `Chef`, `Cashier`, `ArrivalSchedule`, `RegularCustomer`, `VIPCustomer`, `CriticCustomer`, the enums, `Money`.
 
 **Deleted:** nothing.
 
-**What still works.** `GameTests` keeps every Stage 1 and Stage 2 check (the Stage 1 checks that used the three-dish menu now build that menu explicitly, because the game menu has five entries) and adds the combo reference values, Happy Hour timing, discount, price lock and recovery, and the Host. The recorded runs replay the whole game. See [docs/test-notes.md](docs/test-notes.md).
+**Stage 3 clean-up (no behaviour change).** After the Stage 3 features worked, review found structure the features did not need but the design should not keep: a controller that also parsed commands and picked customers, the screen repeating the staff-task rules, a live queue handed out for the controller to edit, a static order counter, and a controller and screen that referenced each other. The clean-up commit `74c50eb` fixes these in the files listed above and touches no rule: the Waiter, Host, Chef, Cashier, `HappyHour`, `ComboMeal` and the customer types are unchanged. Evidence that behaviour is the same: `runs/victory.txt`, `runs/defeat.txt` and an invalid-input session print byte-identical transcripts before and after, and every earlier check still passes.
+
+**What still works.** `GameTests` keeps every Stage 1 and Stage 2 check (the Stage 1 checks that used the three-dish menu now build that menu explicitly, because the game menu has five entries) and adds the combo reference values, Happy Hour timing, discount, price lock and recovery, the Host, and (clean-up) the queue protection, staff task lists and objective check. The recorded runs replay the whole game. See [docs/test-notes.md](docs/test-notes.md).
 
 ## Design evidence
 
@@ -192,7 +198,7 @@ Each member's AI chats are in their own folder: [Li MU-EN](docs/individual/Li%20
 
 | Path | Contents |
 |---|---|
-| `src/restaurantrush/` | Java source. `entity/` holds the domain classes, `control/` the turn controller and the arrival schedule, `boundary/` the command-line interface |
+| `src/restaurantrush/` | Java source. `entity/` holds the domain classes, `control/` the turn controller, the command parser and staff actions and the arrival schedule, `boundary/` the command-line interface; `Main` wires the two |
 | `test/restaurantrush/` | `GameTests`, plain-Java checks |
 | `runs/` | Recorded manager choices that replay a victory and a defeat |
 | `docs/` | Assignment brief and briefing, test notes, UML diagrams (`docs/diagrams`, sources in `docs/diagrams/src`) |
