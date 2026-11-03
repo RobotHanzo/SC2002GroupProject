@@ -2,7 +2,7 @@
 ' ======================================================================
 ' SC2002 Restaurant Rush - Stage 3 class diagram (source of truth)
 ' Colour key: green = new in Stage 3, yellow = changed since Stage 2, blue = unchanged
-' Render: see docs/diagrams/src/README.md
+' Render: PlantUML 1.2025.4 with the built-in Smetana layout (no Graphviz), SVG printed to PDF
 ' ======================================================================
 !pragma layout smetana
 title Restaurant Rush: Stage 3 class diagram
@@ -33,6 +33,7 @@ class RestaurantCLI <<boundary>> #FAE8A6 {
   -input: Scanner
   -out: PrintStream
   -echoInput: boolean
+  +RestaurantCLI(in: InputStream, out: PrintStream, echoInput: boolean)
   +displayIntro(maxTurns: int): void
   +readWaiterChoice(): String
   +readChefChoice(): String
@@ -43,20 +44,33 @@ class RestaurantCLI <<boundary>> #FAE8A6 {
   +displayError(String): void
   +displayResult(boolean, Restaurant, turnsUsed: int): void
   +displayInputEnded(): void
+  -readLine(prompt: String): String
+  {static} -averageText(Restaurant): String
+  {static} -happyHourText(HappyHour): String
+  {static} -queueText(Restaurant): String
+  {static} -tablesText(Restaurant): String
+  {static} -orderText(Customer): String
+  {static} -hostTasksText(Restaurant): String
+  {static} -waiterTasksText(Restaurant): String
+  {static} -chefTasksText(Restaurant): String
+  {static} -ids(customers: List<Customer>): String
 }
 
 class Main <<entry point>> #FAE8A6 {
-  +main(args: String[]): void
-  +play(in: InputStream, out: PrintStream, echoInput: boolean): void
+  -Main()
+  {static} +main(args: String[]): void
+  {static} +play(in: InputStream, out: PrintStream, echoInput: boolean): void
 }
 
 class GameController <<control>> #FAE8A6 {
+  {static} -MAX_TURNS: int = 18
   -restaurant: Restaurant
   -schedule: ArrivalSchedule
   -staff: StaffActions
   -currentTurn: int
   -maxTurns: int
   -cli: RestaurantCLI
+  +GameController(cli: RestaurantCLI)
   +startGame(): void
   -executeTurn(): void
   -processHappyHourActivation(): void
@@ -66,10 +80,12 @@ class GameController <<control>> #FAE8A6 {
   -coordinateHostAction(): void
   -coordinatePaymentProcessing(): void
   -processEndOfTurnUpdates(): void
+  -chooseUntilAccepted(reader: Supplier<String>, task: Function<ManagerCommand, Optional<String>>): void
 }
 
 class StaffActions <<control>> #CCEBD2 {
   -restaurant: Restaurant
+  ~StaffActions(restaurant: Restaurant)
   ~host(ManagerCommand): Optional<String>
   ~waiter(ManagerCommand, currentTurn: int): Optional<String>
   ~chef(ManagerCommand): Optional<String>
@@ -82,9 +98,11 @@ class StaffActions <<control>> #CCEBD2 {
 class ManagerCommand <<control>> #CCEBD2 {
   -verb: String
   -customerId: Integer
+  -ManagerCommand(verb: String, customerId: Integer)
   {static} ~parse(raw: String): ManagerCommand
   ~getVerb(): String
   ~select(candidates: List<Customer>, everyone: List<Customer>,\n    noCandidates: String, ineligible: String): Customer
+  {static} -idList(customers: List<Customer>): String
 }
 
 class ArrivalSchedule {
@@ -93,10 +111,12 @@ class ArrivalSchedule {
   -customerTypes: List<IntFunction<Customer>>
   +isArrivalTurn(turn: int): boolean
   +createArrival(turn: int): Customer
+  -indexOf(turn: int): int
 }
 
 ' ---------- restaurant and policies ----------
 class Restaurant #FAE8A6 {
+  {static} -TABLE_COUNT: int = 2
   {static} +REQUIRED_PAID_CUSTOMERS: int = 4
   {static} +REQUIRED_REVENUE_CENTS: int = 4500
   {static} +REQUIRED_AVERAGE_SATISFACTION: int = 60
@@ -110,6 +130,7 @@ class Restaurant #FAE8A6 {
   -cashier: Cashier
   -host: Host
   -revenueCents: int
+  +Restaurant()
   +registerArrival(Customer): void
   +findAvailableTable(): Table
   +findOldestEligiblePayer(turn: int): Customer
@@ -119,6 +140,7 @@ class Restaurant #FAE8A6 {
   +getChef(): Chef
   +getCashier(): Cashier
   +getHost(): Host
+  +getTables(): List<Table>
   +getCustomers(): List<Customer>
   +getWaitingQueue(): List<Customer>
   +seatFromQueue(Customer, Table, BiConsumer<Customer, Table>): void
@@ -135,6 +157,7 @@ class Restaurant #FAE8A6 {
   +handleAbandonment(Customer): void
   +getUnhappyDepartureCount(): int
   +hasMetObjective(): boolean
+  -countWithStatus(status: CustomerStatus): int
 }
 
 class HappyHour #CCEBD2 {
@@ -154,6 +177,7 @@ class HappyHour #CCEBD2 {
 
 class Menu {
   -items: List<MenuItem>
+  +Menu(items: List<MenuItem>)
   +getItems(): List<MenuItem>
   +getItem(index: int): MenuItem
   +size(): int
@@ -171,6 +195,7 @@ class MenuItem #FAE8A6 {
 }
 
 class ComboMeal #CCEBD2 {
+  {static} -PRICE_PERCENT: int = 90
   -first: MenuItem
   -second: MenuItem
   +ComboMeal(first: MenuItem, second: MenuItem)
@@ -199,6 +224,8 @@ class Cashier {
 class Table {
   -tableId: int
   -occupant: Customer
+  +Table(tableId: int)
+  +getTableId(): int
   +isAvailable(): boolean
   +seat(Customer): void
   +release(): void
@@ -207,12 +234,14 @@ class Table {
 
 ' ---------- customers ----------
 abstract class Customer #FAE8A6 {
+  {static} -MAX_SATISFACTION: int = 100
   -customerId: int
   -satisfaction: int
   -status: CustomerStatus
   -order: Order
   -servedTurn: int
   -readyTurn: int
+  #Customer(customerId: int)
   +getId(): int
   +getStatus(): CustomerStatus
   +getSatisfaction(): int
@@ -236,22 +265,30 @@ abstract class Customer #FAE8A6 {
   +markPaid(): void
   +shouldAbandon(): boolean
   +markAbandoned(): void
+  -require(expected: CustomerStatus): void
 }
 
 class RegularCustomer {
+  {static} -SATISFACTION_LOSS: int = 8
+  +RegularCustomer(customerId: int)
   +getTypeLabel(): String
   #getSatisfactionLoss(): int
 }
 
 class VIPCustomer {
+  {static} -SATISFACTION_LOSS: int = 5
+  {static} -PRICE_PERCENT: int = 90
+  +VIPCustomer(customerId: int)
   +getTypeLabel(): String
   #getSatisfactionLoss(): int
   +calculateBillCents(basePriceCents: int): int
 }
 
 class CriticCustomer {
+  {static} -SATISFACTION_LOSS: int = 12
   {static} -LATE_SERVICE_TURNS: int = 2
   {static} -LATE_PENALTY: int = 10
+  +CriticCustomer(customerId: int)
   +getTypeLabel(): String
   #getSatisfactionLoss(): int
   +chooseMenuItem(Menu): MenuItem
@@ -271,8 +308,11 @@ class Order #FAE8A6 {
   +markPaid(): void
   +cancel(): void
   +getStatus(): OrderStatus
+  +getItem(): MenuItem
+  +getCompletedUnits(): int
   +getBillCents(): int
   +getTurnTaken(): int
+  -require(expected: OrderStatus, action: String): void
 }
 
 enum CustomerStatus #EAF1F7 {
@@ -294,12 +334,19 @@ enum OrderStatus #EAF1F7 {
   CANCELLED
 }
 
+' ---------- utility ----------
+class Money <<utility>> #EAF1F7 {
+  -Money()
+  {static} +format(cents: int): String
+}
+
 ' ---------- layout skeleton (hidden links keep the rows tidy) ----------
 ' Smetana cannot route labelled same-rank links, so sideways links carry no mid-link label.
 Restaurant -[hidden]right- GameController
 GameController -[hidden]right- StaffActions
 StaffActions -[hidden]right- ManagerCommand
-RestaurantCLI -[hidden]right- ArrivalSchedule
+RestaurantCLI -[hidden]right- Money
+Money -[hidden]right- ArrivalSchedule
 Main -[hidden]right- RestaurantCLI
 Host -[hidden]right- Table
 Table -[hidden]right- Waiter
@@ -320,6 +367,10 @@ GameController "1" -up-> "schedule 1" ArrivalSchedule
 GameController "1" -right-> "staff 1" StaffActions
 GameController "1" -left-> "restaurant 1" Restaurant
 StaffActions .right.> ManagerCommand
+GameController .[#777777]right.> ManagerCommand
+RestaurantCLI .[#777777]right.> Money
+GameController .[#777777]up.> Money
+StaffActions .[#777777]up.> Money
 RestaurantCLI .down.> Restaurant : displays
 ArrivalSchedule .down.> Customer : <<create>>\nRegular, VIP, Critic
 
@@ -500,5 +551,8 @@ legend left
     and StaffActions
   RestaurantCLI: Host and Happy Hour prompts; no longer
     references GameController (Main wires them)
+  <b>Complete:</b> every attribute, constructor and
+  operation in the Stage 3 code is listed (underlined =
+  static; private helpers included).
 end legend
 @enduml
