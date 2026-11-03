@@ -5,10 +5,8 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import restaurantrush.control.GameController;
 import restaurantrush.entity.Customer;
 import restaurantrush.entity.CustomerStatus;
 import restaurantrush.entity.HappyHour;
@@ -19,13 +17,13 @@ import restaurantrush.entity.Table;
 
 /**
  * The command-line boundary. It prints the game state and reads the manager's choices as text;
- * it contains no game rules (the controller decides whether a choice is legal).
+ * it contains no game rules (the staff and domain objects decide whether a choice is legal) and
+ * does not know the controller: the controller calls it, and Main wires the two together.
  */
 public class RestaurantCLI {
     private final Scanner input;
     private final PrintStream out;
     private final boolean echoInput;
-    private GameController controller;
 
     /** echoInput repeats each line read, so a run fed from a file (stdin) reads like a transcript. */
     public RestaurantCLI(InputStream in, PrintStream out, boolean echoInput) {
@@ -34,22 +32,20 @@ public class RestaurantCLI {
         this.echoInput = echoInput;
     }
 
-    /** Runs one game. If the input ends before the game does, the run stops with a message. */
-    public void start() {
-        controller = new GameController(this);
+    public void displayIntro(int maxTurns) {
         out.println("SC2002 Restaurant Rush - Stage 3");
-        out.println("You manage a restaurant for " + controller.getMaxTurns() + " turns. Each turn the Waiter does one");
+        out.println("You manage a restaurant for " + maxTurns + " turns. Each turn the Waiter does one");
         out.println("task (SEAT, TAKE_ORDER or SERVE), the Host can also SEAT one queued customer, and the Chef");
         out.println("advances one order by one unit (COOK). Once per game you may switch Happy Hour on.");
-        out.println("Press Enter to WAIT. Goal: at least " + GameController.REQUIRED_PAID_CUSTOMERS + " paid customers, revenue of at least "
-                + Money.format(GameController.REQUIRED_REVENUE_CENTS) + ", average satisfaction of at least "
-                + GameController.REQUIRED_AVERAGE_SATISFACTION + ".");
-        try {
-            controller.startGame();
-        } catch (NoSuchElementException inputEnded) {
-            out.println();
-            out.println("The input ended before the game finished, so the run stops here.");
-        }
+        out.println("Press Enter to WAIT. Goal: at least " + Restaurant.REQUIRED_PAID_CUSTOMERS + " paid customers, revenue of at least "
+                + Money.format(Restaurant.REQUIRED_REVENUE_CENTS) + ", average satisfaction of at least "
+                + Restaurant.REQUIRED_AVERAGE_SATISFACTION + ".");
+    }
+
+    /** Shown when the input ends before the game does. */
+    public void displayInputEnded() {
+        out.println();
+        out.println("The input ended before the game finished, so the run stops here.");
     }
 
     public String readHostChoice() {
@@ -79,10 +75,9 @@ public class RestaurantCLI {
         }
     }
 
-    public void displayTurnStatus(Restaurant restaurant) {
+    public void displayTurnStatus(Restaurant restaurant, int turn, int maxTurns) {
         out.println();
-        out.println("=================== TURN " + controller.getCurrentTurn() + " of " + controller.getMaxTurns()
-                + " ===================");
+        out.println("=================== TURN " + turn + " of " + maxTurns + " ===================");
         out.println("Revenue: " + Money.format(restaurant.getRevenueCents())
                 + " | Average satisfaction of paid customers: " + averageText(restaurant)
                 + " | Served: " + restaurant.getServedCustomerCount()
@@ -113,19 +108,19 @@ public class RestaurantCLI {
         out.println("  ! Not possible: " + reason + ". Choose again.");
     }
 
-    public void displayResult(boolean won, Restaurant restaurant) {
+    public void displayResult(boolean won, Restaurant restaurant, int turnsUsed) {
         out.println();
         out.println("=================== GAME OVER ===================");
         out.println(won ? "VICTORY" : "DEFEAT");
         out.println("Paid customers: " + restaurant.getPaidCustomerCount() + " (need "
-                + GameController.REQUIRED_PAID_CUSTOMERS + ")");
+                + Restaurant.REQUIRED_PAID_CUSTOMERS + ")");
         out.println("Revenue: " + Money.format(restaurant.getRevenueCents()) + " (need "
-                + Money.format(GameController.REQUIRED_REVENUE_CENTS) + ")");
+                + Money.format(Restaurant.REQUIRED_REVENUE_CENTS) + ")");
         out.println("Average satisfaction of paid customers: " + averageText(restaurant) + " (need "
-                + GameController.REQUIRED_AVERAGE_SATISFACTION + ")");
+                + Restaurant.REQUIRED_AVERAGE_SATISFACTION + ")");
         out.println("Customers served: " + restaurant.getServedCustomerCount()
                 + " | Unhappy departures: " + restaurant.getUnhappyDepartureCount()
-                + " | Turns used: " + controller.getCurrentTurn());
+                + " | Turns used: " + turnsUsed);
     }
 
     private String readLine(String prompt) {
@@ -185,47 +180,30 @@ public class RestaurantCLI {
     }
 
     private static String hostTasksText(Restaurant restaurant) {
-        if (restaurant.getWaitingQueue().isEmpty() || restaurant.findAvailableTable() == null) {
-            return "none available (WAIT)";
-        }
-        return "SEAT " + ids(new ArrayList<>(restaurant.getWaitingQueue()));
+        List<Customer> seatable = restaurant.getSeatableCustomers();
+        return seatable.isEmpty() ? "none available (WAIT)" : "SEAT " + ids(seatable);
     }
 
     private static String waiterTasksText(Restaurant restaurant) {
         List<String> tasks = new ArrayList<>();
-        if (!restaurant.getWaitingQueue().isEmpty() && restaurant.findAvailableTable() != null) {
-            tasks.add("SEAT " + ids(new ArrayList<>(restaurant.getWaitingQueue())));
+        List<Customer> seatable = restaurant.getSeatableCustomers();
+        if (!seatable.isEmpty()) {
+            tasks.add("SEAT " + ids(seatable));
         }
-        List<Customer> seated = withStatus(restaurant, CustomerStatus.SEATED, false);
-        if (!seated.isEmpty()) {
-            tasks.add("TAKE_ORDER " + ids(seated));
+        List<Customer> toOrder = restaurant.getCustomersWithStatus(CustomerStatus.SEATED);
+        if (!toOrder.isEmpty()) {
+            tasks.add("TAKE_ORDER " + ids(toOrder));
         }
-        List<Customer> ready = withStatus(restaurant, CustomerStatus.ORDERED, true);
-        if (!ready.isEmpty()) {
-            tasks.add("SERVE " + ids(ready));
+        List<Customer> toServe = restaurant.getCustomersToServe();
+        if (!toServe.isEmpty()) {
+            tasks.add("SERVE " + ids(toServe));
         }
         return tasks.isEmpty() ? "none available (WAIT)" : String.join("; ", tasks);
     }
 
     private static String chefTasksText(Restaurant restaurant) {
-        List<Customer> cooking = new ArrayList<>();
-        for (Customer customer : withStatus(restaurant, CustomerStatus.ORDERED, false)) {
-            if (!customer.getOrder().isReady()) {
-                cooking.add(customer);
-            }
-        }
-        return cooking.isEmpty() ? "none available (WAIT)" : "COOK " + ids(cooking);
-    }
-
-    /** Customers with the given status; for ORDERED, readyOnly keeps those whose dish is READY. */
-    private static List<Customer> withStatus(Restaurant restaurant, CustomerStatus status, boolean readyOnly) {
-        List<Customer> matching = new ArrayList<>();
-        for (Customer customer : restaurant.getCustomers()) {
-            if (customer.getStatus() == status && (!readyOnly || customer.getOrder().isReady())) {
-                matching.add(customer);
-            }
-        }
-        return matching;
+        List<Customer> toCook = restaurant.getCustomersToCook();
+        return toCook.isEmpty() ? "none available (WAIT)" : "COOK " + ids(toCook);
     }
 
     private static String ids(List<Customer> customers) {

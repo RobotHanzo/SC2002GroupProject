@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import restaurantrush.boundary.RestaurantCLI;
 import restaurantrush.control.ArrivalSchedule;
 import restaurantrush.entity.ComboMeal;
 import restaurantrush.entity.CriticCustomer;
@@ -73,6 +72,11 @@ public final class GameTests {
         happyHourLetsWaitingCustomersRecoverSatisfaction();
         // Stage 3: Host
         hostSeatsACustomerAndRejectsBadRequests();
+        // Stage 3 clean-up: state protection and who owns which rule
+        waitingQueueIsReadOnlyAndSeatingIsAtomic();
+        restaurantKnowsWhatEachStaffMemberCanDo();
+        restaurantKnowsWhenTheObjectiveIsMet();
+        screenAndControllerDoNotDependOnEachOther();
         // Full recorded runs
         victoryRunIsReproducible();
         defeatRunIsReproducible();
@@ -163,8 +167,7 @@ public final class GameTests {
         Customer customer = new RegularCustomer(1);
         restaurant.registerArrival(customer);
         Table table = restaurant.findAvailableTable();
-        restaurant.getWaiter().seatCustomer(customer, table);
-        restaurant.getWaitingQueue().remove(customer);
+        restaurant.seatFromQueue(customer, table, restaurant.getWaiter()::seatCustomer);
         expectRejected("the Cashier cannot charge a seated customer",
                 () -> restaurant.getCashier().processPayment(customer, restaurant));
         restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), restaurant.getHappyHour(), 2);
@@ -188,8 +191,7 @@ public final class GameTests {
         restaurant.registerArrival(seated);
         restaurant.registerArrival(queued);
         Table table = restaurant.findAvailableTable();
-        restaurant.getWaiter().seatCustomer(seated, table);
-        restaurant.getWaitingQueue().remove(seated);
+        restaurant.seatFromQueue(seated, table, restaurant.getWaiter()::seatCustomer);
         restaurant.getWaiter().takeOrder(seated, restaurant.getMenu(), restaurant.getHappyHour(), 2);
         restaurant.handleAbandonment(seated);
         check("abandoned customer is ABANDONED", seated.getStatus() == CustomerStatus.ABANDONED);
@@ -233,8 +235,7 @@ public final class GameTests {
         Restaurant restaurant = new Restaurant();
         Customer vip = new VIPCustomer(1);
         restaurant.registerArrival(vip);
-        restaurant.getWaiter().seatCustomer(vip, restaurant.findAvailableTable());
-        restaurant.getWaitingQueue().remove(vip);
+        restaurant.seatFromQueue(vip, restaurant.findAvailableTable(), restaurant.getWaiter()::seatCustomer);
         Order order = restaurant.getWaiter().takeOrder(vip, restaurant.getMenu(), restaurant.getHappyHour(), 2);
         check("the VIP orders a Burger", order.getItem().getName().equals("Burger"));
         check("without Happy Hour the bill is locked at $13.50", order.getBillCents() == 1350);
@@ -265,8 +266,7 @@ public final class GameTests {
     private static int satisfactionAfterServiceDelay(Customer customer, int delayTurns) {
         Restaurant restaurant = new Restaurant();
         restaurant.registerArrival(customer);
-        restaurant.getWaiter().seatCustomer(customer, restaurant.findAvailableTable());
-        restaurant.getWaitingQueue().remove(customer);
+        restaurant.seatFromQueue(customer, restaurant.findAvailableTable(), restaurant.getWaiter()::seatCustomer);
         Order order = new Order(BURGER, 1500, 2);
         customer.assignOrder(order);
         restaurant.getChef().prepare(order);
@@ -296,10 +296,12 @@ public final class GameTests {
     }
 
     private static void controllerDispatchesThroughCustomersNotTypeChecks() throws IOException {
-        String controller = Files.readString(Path.of("src/restaurantrush/control/GameController.java"));
-        check("GameController contains no instanceof", !controller.contains("instanceof"));
-        check("GameController never branches on the customer type", !controller.contains("Critic")
-                && !controller.contains("VIP") && !controller.contains("Regular"));
+        for (String name : List.of("GameController", "StaffActions", "ManagerCommand")) {
+            String source = Files.readString(Path.of("src/restaurantrush/control/" + name + ".java"));
+            check(name + " contains no instanceof", !source.contains("instanceof"));
+            check(name + " never branches on the customer type", !source.contains("Critic")
+                    && !source.contains("VIP") && !source.contains("Regular"));
+        }
     }
 
     // ---- Stage 3: ComboMeal ---------------------------------------------------------------
@@ -518,6 +520,101 @@ public final class GameTests {
                         + "satisfaction. Turns left: 2."));
     }
 
+    // ---- Stage 3 clean-up ------------------------------------------------------------------
+
+    private static void waitingQueueIsReadOnlyAndSeatingIsAtomic() {
+        Restaurant restaurant = new Restaurant();
+        Customer first = new RegularCustomer(1);
+        Customer second = new RegularCustomer(2);
+        Customer third = new RegularCustomer(3);
+        for (Customer customer : List.of(first, second, third)) {
+            restaurant.registerArrival(customer);
+        }
+        try {
+            restaurant.getWaitingQueue().remove(first);
+            check("the waiting queue cannot be changed from outside", false);
+        } catch (UnsupportedOperationException expected) {
+            check("the waiting queue cannot be changed from outside", true);
+        }
+        check("the queue keeps arrival order", restaurant.getWaitingQueue().equals(List.of(first, second, third)));
+
+        Table table = restaurant.findAvailableTable();
+        restaurant.seatFromQueue(second, table, restaurant.getHost()::seatCustomer);
+        check("a seated customer leaves the queue and the others keep their places",
+                restaurant.getWaitingQueue().equals(List.of(first, third)) && second.getStatus() == CustomerStatus.SEATED);
+
+        expectRejected("seating at an occupied table is rejected", () ->
+                restaurant.seatFromQueue(first, table, restaurant.getWaiter()::seatCustomer));
+        check("a rejected seating leaves the customer in the queue",
+                restaurant.getWaitingQueue().contains(first) && first.getStatus() == CustomerStatus.WAITING);
+        expectRejected("a customer who is not in the queue cannot be seated from it", () ->
+                restaurant.seatFromQueue(second, restaurant.findAvailableTable(), restaurant.getWaiter()::seatCustomer));
+        check("a rejected request for a seated customer does not seat them twice",
+                second.getStatus() == CustomerStatus.SEATED && table.getOccupied() == second);
+    }
+
+    private static void restaurantKnowsWhatEachStaffMemberCanDo() {
+        Restaurant restaurant = new Restaurant();
+        Customer first = new RegularCustomer(1);
+        Customer second = new RegularCustomer(2);
+        Customer third = new RegularCustomer(3);
+        for (Customer customer : List.of(first, second, third)) {
+            restaurant.registerArrival(customer);
+        }
+        check("with a free table everyone in the queue can be seated", restaurant.getSeatableCustomers().size() == 3);
+        check("nobody has ordered, so there is nothing to cook or serve",
+                restaurant.getCustomersToCook().isEmpty() && restaurant.getCustomersToServe().isEmpty());
+
+        restaurant.seatFromQueue(first, restaurant.findAvailableTable(), restaurant.getWaiter()::seatCustomer);
+        restaurant.seatFromQueue(second, restaurant.findAvailableTable(), restaurant.getHost()::seatCustomer);
+        check("with both tables occupied nobody can be seated", restaurant.getSeatableCustomers().isEmpty());
+        check("the seated customers are waiting to order",
+                restaurant.getCustomersWithStatus(CustomerStatus.SEATED).equals(List.of(first, second)));
+
+        restaurant.getWaiter().takeOrder(first, restaurant.getMenu(), restaurant.getHappyHour(), 2);
+        restaurant.getWaiter().takeOrder(second, restaurant.getMenu(), restaurant.getHappyHour(), 2);
+        check("an order that is not finished is for the Chef, not the Waiter",
+                restaurant.getCustomersToCook().equals(List.of(first, second)) && restaurant.getCustomersToServe().isEmpty());
+        restaurant.getChef().prepare(first.getOrder());
+        check("once READY it moves from the Chef list to the Waiter list",
+                restaurant.getCustomersToServe().equals(List.of(first)) && restaurant.getCustomersToCook().equals(List.of(second)));
+    }
+
+    private static void restaurantKnowsWhenTheObjectiveIsMet() {
+        Restaurant restaurant = new Restaurant();
+        check("a restaurant that has served nobody has not met the objective", !restaurant.hasMetObjective());
+        for (int id = 1; id <= Restaurant.REQUIRED_PAID_CUSTOMERS; id++) {
+            Customer customer = new RegularCustomer(id);
+            restaurant.registerArrival(customer);
+            restaurant.seatFromQueue(customer, restaurant.findAvailableTable(), restaurant.getWaiter()::seatCustomer);
+            customer.assignOrder(new Order(PASTA, 1800, 1));
+            restaurant.getChef().prepare(customer.getOrder());
+            restaurant.getChef().prepare(customer.getOrder());
+            restaurant.getWaiter().serveOrder(customer, 2);
+            customer.markReadyToPay(3);
+            restaurant.getCashier().processPayment(customer, restaurant);
+            if (id < Restaurant.REQUIRED_PAID_CUSTOMERS) {
+                check("with " + id + " paid customers ($" + (18 * id) + ") the objective is not met", !restaurant.hasMetObjective());
+            }
+        }
+        check("4 paid customers, $72.00 and average satisfaction 100 meet the objective", restaurant.hasMetObjective());
+    }
+
+    private static void screenAndControllerDoNotDependOnEachOther() throws IOException {
+        String screen = Files.readString(Path.of("src/restaurantrush/boundary/RestaurantCLI.java"));
+        check("the command-line screen does not use the controller", !screen.contains("GameController")
+                && !screen.contains("restaurantrush.control"));
+        check("the screen does not recompute which customers a staff member can act on",
+                !screen.contains("CustomerStatus.ORDERED") && !screen.contains("isReady()")
+                        && !screen.contains("findAvailableTable"));
+        boolean globalState = false;
+        for (java.lang.reflect.Field field : Order.class.getDeclaredFields()) {
+            int modifiers = field.getModifiers();
+            globalState |= java.lang.reflect.Modifier.isStatic(modifiers) && !java.lang.reflect.Modifier.isFinal(modifiers);
+        }
+        check("an Order keeps no global mutable state (no static id counter)", !globalState);
+    }
+
     // ---- tiny helpers --------------------------------------------------------------------
 
     private static Menu baseMenu() {
@@ -533,8 +630,7 @@ public final class GameTests {
     /** Seats the customer, has the Waiter take their order at turn 2, then frees the table again. */
     private static Order orderFor(Restaurant restaurant, Customer customer) {
         restaurant.registerArrival(customer);
-        restaurant.getWaiter().seatCustomer(customer, restaurant.findAvailableTable());
-        restaurant.getWaitingQueue().remove(customer);
+        restaurant.seatFromQueue(customer, restaurant.findAvailableTable(), restaurant.getWaiter()::seatCustomer);
         Order order = restaurant.getWaiter().takeOrder(customer, restaurant.getMenu(), restaurant.getHappyHour(), 2);
         restaurant.releaseTableOf(customer);
         return order;
@@ -553,7 +649,7 @@ public final class GameTests {
     private static String play(InputStream choices) {
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         try (PrintStream out = new PrintStream(captured, true, StandardCharsets.UTF_8)) {
-            new RestaurantCLI(choices, out, true).start();
+            Main.play(choices, out, true);
         }
         return captured.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }

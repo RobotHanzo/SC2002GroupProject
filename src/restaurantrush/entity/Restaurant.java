@@ -2,21 +2,25 @@ package restaurantrush.entity;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
+import java.util.function.BiConsumer;
 
 /**
  * The restaurant owns its tables, staff and menu (composition) and keeps the books: the waiting
  * queue, every customer who has arrived, and the revenue. Customers are aggregated because they
- * arrive and leave.
+ * arrive and leave. It also knows what each staff member can do right now (the getCustomers...
+ * queries below), so the screen and the controller ask it instead of re-deriving the rules.
  */
 public class Restaurant {
+    public static final int REQUIRED_PAID_CUSTOMERS = 4;
+    public static final int REQUIRED_REVENUE_CENTS = 4500;
+    public static final int REQUIRED_AVERAGE_SATISFACTION = 60;
+
     private static final int TABLE_COUNT = 2;
 
     private final List<Table> tables = new ArrayList<>();
     private final List<Customer> customers = new ArrayList<>();
-    private final Queue<Customer> waitingQueue = new LinkedList<>();
+    private final List<Customer> waitingQueue = new ArrayList<>();
     private final Waiter waiter = new Waiter();
     private final Chef chef = new Chef();
     private final Cashier cashier = new Cashier();
@@ -94,9 +98,67 @@ public class Restaurant {
         return Collections.unmodifiableList(customers);
     }
 
-    /** The live FIFO queue: the controller removes a customer from it once the customer is seated. */
-    public Queue<Customer> getWaitingQueue() {
-        return waitingQueue;
+    /** The waiting queue, first to arrive first. Read-only: a customer leaves it by being seated or by abandoning. */
+    public List<Customer> getWaitingQueue() {
+        return Collections.unmodifiableList(waitingQueue);
+    }
+
+    /**
+     * Seats a queued customer by the given staff action (the Waiter's or the Host's seatCustomer).
+     * The customer leaves the queue only if the staff member accepts the request, so a rejected
+     * seating changes nothing.
+     */
+    public void seatFromQueue(Customer customer, Table table, BiConsumer<Customer, Table> seatedBy) {
+        if (!waitingQueue.contains(customer)) {
+            throw new IllegalStateException("Customer #" + customer.getId() + " is not in the waiting queue");
+        }
+        seatedBy.accept(customer, table);
+        waitingQueue.remove(customer);
+    }
+
+    /** Customers with the given status, in arrival order. */
+    public List<Customer> getCustomersWithStatus(CustomerStatus status) {
+        List<Customer> matching = new ArrayList<>();
+        for (Customer customer : customers) {
+            if (customer.getStatus() == status) {
+                matching.add(customer);
+            }
+        }
+        return matching;
+    }
+
+    /** Whom the Host or the Waiter could seat now: the queue, or nobody while both tables are occupied. */
+    public List<Customer> getSeatableCustomers() {
+        return findAvailableTable() == null ? List.of() : List.copyOf(waitingQueue);
+    }
+
+    /** Customers whose dish is READY and waiting for the Waiter to serve it. */
+    public List<Customer> getCustomersToServe() {
+        List<Customer> matching = new ArrayList<>();
+        for (Customer customer : getCustomersWithStatus(CustomerStatus.ORDERED)) {
+            if (customer.getOrder().isReady()) {
+                matching.add(customer);
+            }
+        }
+        return matching;
+    }
+
+    /** Customers whose dish still needs the Chef's preparation units. */
+    public List<Customer> getCustomersToCook() {
+        List<Customer> matching = new ArrayList<>();
+        for (Customer customer : getCustomersWithStatus(CustomerStatus.ORDERED)) {
+            if (!customer.getOrder().isReady()) {
+                matching.add(customer);
+            }
+        }
+        return matching;
+    }
+
+    /** Victory needs all three targets (checked after the last turn). */
+    public boolean hasMetObjective() {
+        return getPaidCustomerCount() >= REQUIRED_PAID_CUSTOMERS
+                && getRevenueCents() >= REQUIRED_REVENUE_CENTS
+                && getAverageSatisfaction() >= REQUIRED_AVERAGE_SATISFACTION;
     }
 
     public void recordPayment(int amountCents) {

@@ -7,9 +7,6 @@ package restaurantrush.entity;
  * and PLACED / PREPARING / READY -> CANCELLED when the customer leaves.
  */
 public class Order {
-    private static int nextOrderId = 1;
-
-    private final int orderId;
     private final MenuItem item;
     private int completedUnits;
     private OrderStatus status;
@@ -18,7 +15,6 @@ public class Order {
 
     /** The bill is fixed here and has no setter: the price is locked when the order is taken. */
     public Order(MenuItem item, int billCents, int turnTaken) {
-        this.orderId = nextOrderId++;
         this.item = item;
         this.billCents = billCents;
         this.turnTaken = turnTaken;
@@ -58,10 +54,6 @@ public class Order {
 
     public OrderStatus getStatus() {
         return status;
-    }
-
-    public int getOrderId() {
-        return orderId;
     }
 
     public MenuItem getItem() {

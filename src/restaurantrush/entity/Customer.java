@@ -36,6 +36,11 @@ public abstract class Customer {
     /** Short name of the customer type, for display. */
     public abstract String getTypeLabel();
 
+    /** How messages refer to this customer, for example "Customer #3 (Regular)". */
+    public String getDisplayName() {
+        return "Customer #" + customerId + " (" + getTypeLabel() + ")";
+    }
+
     /** Satisfaction lost at the end of each turn spent waiting for service. */
     protected abstract int getSatisfactionLoss();
 
