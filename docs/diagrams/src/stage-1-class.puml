@@ -3,7 +3,7 @@
 ' SC2002 Restaurant Rush - Stage 1 class diagram (source of truth)
 ' Redrawn from stage-1-class.uml (Visual Paradigm model) in the same style
 ' as the Stage 2 and Stage 3 diagrams. Every class is new in Stage 1.
-' Render: see docs/diagrams/src/README.md
+' Render: PlantUML 1.2025.4 with the built-in Smetana layout (no Graphviz), SVG printed to PDF
 ' ======================================================================
 !pragma layout smetana
 title Restaurant Rush: Stage 1 class diagram
@@ -32,6 +32,8 @@ class RestaurantCLI <<boundary>> {
   -controller: GameController
   -input: Scanner
   -out: PrintStream
+  -echoInput: boolean
+  +RestaurantCLI(in: InputStream, out: PrintStream, echoInput: boolean)
   +start(): void
   +readWaiterChoice(): String
   +readChefChoice(): String
@@ -39,13 +41,29 @@ class RestaurantCLI <<boundary>> {
   +displayMessage(String): void
   +displayError(String): void
   +displayResult(boolean, Restaurant): void
+  -readLine(prompt: String): String
+  {static} -averageText(Restaurant): String
+  {static} -queueText(Restaurant): String
+  {static} -tablesText(Restaurant): String
+  {static} -orderText(Customer): String
+  {static} -waiterTasksText(Restaurant): String
+  {static} -chefTasksText(Restaurant): String
+  {static} -withStatus(restaurant: Restaurant, status: CustomerStatus, readyOnly: boolean): List<Customer>
+  {static} -ids(customers: List<Customer>): String
 }
 
 class GameController <<control>> {
+  {static} +REQUIRED_PAID_CUSTOMERS: int = 4
+  {static} +REQUIRED_REVENUE_CENTS: int = 4500
+  {static} +REQUIRED_AVERAGE_SATISFACTION: int = 60
+  {static} -MAX_TURNS: int = 18
+  {static} -ARRIVAL_INTERVAL: int = 3
+  {static} -LAST_ARRIVAL_TURN: int = 16
   -restaurant: Restaurant
   -currentTurn: int
   -maxTurns: int
   -cli: RestaurantCLI
+  +GameController(cli: RestaurantCLI)
   +startGame(): void
   +getCurrentTurn(): int
   +getMaxTurns(): int
@@ -55,10 +73,21 @@ class GameController <<control>> {
   -coordinatePaymentProcessing(): void
   -processEndOfTurnUpdates(): void
   -evaluateGameResult(): boolean
+  -chooseUntilAccepted(reader: Supplier<String>, task: Consumer<String>): void
+  -performWaiterTask(choice: String): void
+  -performChefTask(choice: String): void
+  -seatQueuedCustomer(command: Command, seater: BiConsumer<Customer, Table>, actor: String): void
+  -takeOrder(command: Command): void
+  -serve(command: Command): void
+  -prepare(command: Command): void
+  -select(command: Command, candidates: List<Customer>, noCandidates: String, ineligible: String): Customer
+  -customersWithStatus(status: CustomerStatus): List<Customer>
+  {static} -idList(customers: Collection<Customer>): String
 }
 
 ' ---------- restaurant and menu ----------
 class Restaurant {
+  {static} -TABLE_COUNT: int = 2
   -tables: List<Table>
   -customers: List<Customer>
   -waitingQueue: Queue<Customer>
@@ -67,12 +96,14 @@ class Restaurant {
   -cashier: Cashier
   -revenueCents: int
   -menuItems: List<MenuItem>
+  +Restaurant()
   +registerArrival(): Customer
   +findAvailableTable(): Table
   +findOldestEligiblePayer(turn: int): Customer
   +getWaiter(): Waiter
   +getChef(): Chef
   +getCashier(): Cashier
+  +getTables(): List<Table>
   +getMenuItems(): List<MenuItem>
   +getCustomers(): List<Customer>
   +getWaitingQueue(): Queue<Customer>
@@ -84,12 +115,14 @@ class Restaurant {
   +getRevenueCents(): int
   +handleAbandonment(Customer): void
   +getUnhappyDepartureCount(): int
+  -countWithStatus(status: CustomerStatus): int
 }
 
 class MenuItem {
   -name: String
   -priceCents: int
   -preparationUnits: int
+  +MenuItem(name: String, priceCents: int, preparationUnits: int)
   +getName(): String
   +getPriceCents(): int
   +getPreparationUnits(): int
@@ -113,6 +146,8 @@ class Cashier {
 class Table {
   -tableId: int
   -occupant: Customer
+  +Table(tableId: int)
+  +getTableId(): int
   +isAvailable(): boolean
   +seat(Customer): void
   +release(): void
@@ -121,12 +156,15 @@ class Table {
 
 ' ---------- customer and order ----------
 class Customer {
+  {static} -MAX_SATISFACTION: int = 100
+  {static} -SATISFACTION_LOSS: int = 8
   -customerId: int
   -satisfaction: int
   -status: CustomerStatus
   -order: Order
   -servedTurn: int
   -readyTurn: int
+  +Customer(customerId: int)
   +getId(): int
   +getStatus(): CustomerStatus
   +getSatisfaction(): int
@@ -142,20 +180,28 @@ class Customer {
   +reduceSatisfaction(): void
   +shouldAbandon(): boolean
   +markAbandoned(): void
+  -isAwaitingService(): boolean
+  -require(expected: CustomerStatus): void
 }
 
 class Order {
+  {static} -nextOrderId: int = 1
   -orderId: int
   -item: MenuItem
   -completedUnits: int
   -status: OrderStatus
+  +Order(item: MenuItem)
   +advancePreparation(): void
   +isReady(): boolean
   +markServed(): void
   +markPaid(): void
   +cancel(): void
   +getStatus(): OrderStatus
+  +getOrderId(): int
+  +getItem(): MenuItem
+  +getCompletedUnits(): int
   +getPriceCents(): int
+  -require(expected: OrderStatus, action: String): void
 }
 
 enum CustomerStatus #EAF1F7 {
@@ -177,7 +223,27 @@ enum OrderStatus #EAF1F7 {
   CANCELLED
 }
 
+' ---------- entry point, utility and nested class ----------
+class Main <<entry point>> {
+  -Main()
+  {static} +main(args: String[]): void
+}
+
+class Money <<utility>> #EAF1F7 {
+  -Money()
+  {static} +format(cents: int): String
+}
+
+class Command <<nested in GameController>> {
+  -verb: String
+  -customerId: Integer
+  -Command(verb: String, customerId: Integer)
+  {static} -parse(raw: String): Command
+}
+
 ' ---------- layout skeleton (hidden links keep the rows tidy) ----------
+Main -[hidden]right- RestaurantCLI
+RestaurantCLI -[hidden]right- Money
 Table -[hidden]right- Waiter
 Waiter -[hidden]right- Chef
 Chef -[hidden]right- Cashier
@@ -190,6 +256,11 @@ CustomerStatus -[hidden]right- OrderStatus
 RestaurantCLI "cli 1" <-down-> "controller 1" GameController
 GameController "1" -down-> "restaurant 1" Restaurant
 RestaurantCLI .down.> Restaurant : displays
+
+Main .[#777777]right.> RestaurantCLI : <<create>>
+RestaurantCLI .[#777777]right.> Money
+GameController .[#777777]up.> Money
+GameController +-right- Command
 
 ' ---------- composition (Restaurant owns these) ----------
 Restaurant "1" *-down- "2" Table : tables
@@ -227,6 +298,9 @@ note top of Restaurant
   Customers are aggregated: they arrive and leave.
   The waitingQueue and customers links both point
   at Customer. Stage 1 has only Regular customers.
+  <b>Complete:</b> every attribute, constructor and
+  operation in the Stage 1 code is listed (underlined =
+  static; private helpers included).
 end note
 
 note bottom of Order
