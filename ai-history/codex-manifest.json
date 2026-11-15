@@ -1,0 +1,52 @@
+{
+  "format_version": 1,
+  "source_file": "rollout-2026-11-15T20-47-40-01a1df3f-c3ac-7a22-abee-500869540b40.jsonl",
+  "session_id": "01a1df3f-c3ac-7a22-abee-500869540b40",
+  "root_session_validation": {
+    "source": "vscode",
+    "project": "D:/Java Projects/SC2002GroupProject",
+    "subagent_sessions_read_or_exported": false
+  },
+  "source_snapshot_sha256": "7401d9a033d29a926ac99c0554ffe5a4c371204cc4bae466764610fa7a56607f",
+  "source_snapshot_bytes": 2717373,
+  "source_snapshot_cutoff_utc": "2026-11-15T13:12:41.286Z",
+  "source_snapshot_cutoff_sgt": "2026-11-15T21:12:41.286000+08:00",
+  "last_included_message_utc": "2026-11-15T13:10:49.999Z",
+  "incomplete_final_jsonl_records_omitted": 0,
+  "export_file": "recovered-conversations/2026-11-15_codex_01a1df3f-c3ac-7a22-abee-500869540b40.md",
+  "export_sha256": "fe89f1ac3d476127c94a72676e0548959b3511ea497ac90b96c70f20110e6a34",
+  "export_bytes": 11886,
+  "included_message_counts": {
+    "user": 2,
+    "assistant/commentary": 9,
+    "assistant/final_answer": 1
+  },
+  "excluded_record_counts": {
+    "session_meta": 2,
+    "event_msg": 113,
+    "response_item/additional_tools": 1,
+    "nonconversation_message/developer": 5,
+    "harness_or_instruction_user_message": 3,
+    "world_state": 7,
+    "turn_context": 2,
+    "response_item/custom_tool_call": 33,
+    "token_usage_record": 67,
+    "response_item/custom_tool_call_output": 33,
+    "response_item/reasoning": 51,
+    "response_item/function_call": 24,
+    "response_item/function_call_output": 23,
+    "inter_agent_communication_metadata": 23,
+    "response_item/agent_message": 23
+  },
+  "credential_pattern_redactions": {
+    "GitHub token": 0,
+    "API secret": 0,
+    "Google API key": 0,
+    "AWS access key": 0,
+    "Private key": 0,
+    "Authorization bearer": 0,
+    "JWT": 0,
+    "Credential assignment": 0
+  },
+  "scope": "Only actual root-session user text and assistant commentary/final replies up to the snapshot cutoff. The active follow-up task final reply and subsequent messages are not claimed included. No assistant analysis, hidden reasoning, system/developer instructions, tool bodies, internal agent messages or subagent sessions are included."
+}

@@ -23,3 +23,7 @@ Hidden thinking, machine/API metadata and binary attachments are excluded. Crede
 | 2026-11-08 | [03a4b28b-05fd-4e94-b641-00d19448ccad.jsonl](recovered-conversations/2026-11-08_03a4b28b-05fd-4e94-b641-00d19448ccad.md) |
 
 These files preserve the evidence available in this repository and the recovered sessions identified above where applicable. Their presence does not certify that every conversation from other accounts, tools or devices has been supplied. Any missing original exchanges should be exported and added without replacing them with a summary.
+
+## Codex review and follow-up snapshot
+
+[Visible Codex conversation](recovered-conversations/2026-11-15_codex_01a1df3f-c3ac-7a22-abee-500869540b40.md) — recorded through 2026-11-15T21:12:41.286000+08:00 (Singapore time). This snapshot includes the original review and the follow-up request/progress available at the cutoff; the follow-up task was still active, so its eventual final reply and later messages are not claimed included. [Snapshot provenance and exclusions](codex-manifest.json).
