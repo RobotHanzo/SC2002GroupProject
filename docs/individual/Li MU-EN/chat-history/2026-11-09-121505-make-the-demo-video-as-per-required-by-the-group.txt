@@ -1,0 +1,325 @@
+
+> <browser_instruction># Claude in Chrome browser automation
+
+  You have access to browser automation tools (mcp__claude-in-chrome__*) for
+  interacting with web pages in Chrome. Follow these guidelines for effective
+  browser automation.
+
+  ## Loading deferred tools
+
+  If the mcp__claude-in-chrome__* tools are deferred (must be loaded via
+  ToolSearch before use), load every tool you expect to need in ONE ToolSearch
+  call — the select query accepts a comma-separated list — never one call per
+  tool. Start with the core set:
+
+  ToolSearch with query
+  "select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__naviga
+  te,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__read_page,mcp__clau
+  de-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__tabs_close_mcp"
+
+  Add task-specific tools to the same call when the task obviously needs them:
+  read_console_messages / read_network_requests for debugging, form_input for
+  forms, gif_creator for recordings, javascript_tool for page scripting.
+
+  ## GIF recording
+
+  When performing multi-step browser interactions that the user may want to
+  review or share, use mcp__claude-in-chrome__gif_creator to record them.
+
+  You must ALWAYS:
+  * Capture extra frames before and after taking actions to ensure smooth
+  playback
+  * Name the file meaningfully to help the user identify it later (e.g.,
+  "login_process.gif")
+
+  ## Console log debugging
+
+  You can use mcp__claude-in-chrome__read_console_messages to read console
+  output. Console output may be verbose. If you are looking for specific log
+  entries, use the 'pattern' parameter with a regex-compatible pattern. This
+  filters results efficiently and avoids overwhelming output. For example, use
+  pattern: "[MyApp]" to filter for application-specific logs rather than
+  reading all console output.
+
+  ## Alerts and dialogs
+
+  IMPORTANT: Do not trigger JavaScript alerts, confirms, prompts, or browser
+  modal dialogs through your actions. These browser dialogs block all further
+  browser events and will prevent the extension from receiving any subsequent
+  commands. Instead, when possible, use console.log for debugging and then use
+  the mcp__claude-in-chrome__read_console_messages tool to read those log
+  messages. If a page has dialog-triggering elements:
+  1. Avoid clicking buttons or links that may trigger alerts (e.g., "Delete"
+  buttons with confirmation dialogs)
+  2. If you must interact with such elements, warn the user first that this may
+  interrupt the session
+  3. Use mcp__claude-in-chrome__javascript_tool to check for and dismiss any
+  existing dialogs before proceeding
+
+  If you accidentally trigger a dialog and lose responsiveness, inform the user
+  they need to manually dismiss it in the browser.
+
+  ## Avoid rabbit holes and loops
+
+  When using browser automation tools, stay focused on the specific task. If
+  you encounter any of the following, stop and ask the user for guidance:
+  - Unexpected complexity or tangential browser exploration
+  - Browser tool calls failing or returning errors after 2-3 attempts
+  - No response from the browser extension
+  - Page elements not responding to clicks or input
+  - Pages not loading or timing out
+  - Unable to complete the browser task despite multiple approaches
+
+  Explain what you attempted, what went wrong, and ask how the user would like
+  to proceed. Do not keep retrying the same failing browser action or explore
+  unrelated pages without checking in first.
+
+  ## Tab context and session startup
+
+  IMPORTANT: At the start of each browser automation session, call
+  mcp__claude-in-chrome__tabs_context_mcp first to get information about the
+  user's current browser tabs. Use this context to understand what the user
+  might want to work with before creating new tabs.
+
+  Never reuse tab IDs from a previous/other session. Follow these guidelines:
+  1. Only reuse an existing tab if the user explicitly asks to work with it
+  2. Otherwise, create a new tab with mcp__claude-in-chrome__tabs_create_mcp
+  3. If a tool returns an error indicating the tab doesn't exist or is invalid,
+  call tabs_context_mcp to get fresh tab IDs
+  4. When a tab is closed by the user or a navigation error occurs, call
+  tabs_context_mcp to see what tabs are available</browser_instruction>
+
+> Make the demo video as per required by the group project requirements and
+  briefing in docs. Use explainroo for it: clone
+  https://github.com/vincentsch/explainroo, read its AGENTS.md and follow the
+  steps.
+
+● I'll start by looking at the project docs and cloning
+  explainroo.
+
+  Searched for 1 pattern, read 9 files, ran 7 shell commands (ctrl+o to expand)
+  ⎿  1 action not run · auto mode's check had no usable answer
+
+● Background command "Install explainroo deps and run doctor" completed (exit
+code 0)
+
+  Read 2 files, ran 24 shell commands (ctrl+o to expand)
+  ⎿  3 actions not run · auto mode's check had no usable answer
+
+● Now let me look at the rendered diagrams to plan the zoomed crops.
+
+  Made 2 scratchpad edits +1013, read 8 files, ran 9 shell commands (ctrl+o to expand)
+
+● Background command "Create stub scenes and generate narration" completed (exit
+code 0)
+
+  Made 1 scratchpad edit +38, searched for 1 pattern, read 1 file, ran 4 shell commands (ctrl+o to expand)
+
+● Narration is regenerating in the background; I'll continue once it finishes
+  and run the layout check.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Background command "Wait until narration regeneration finishes" completed
+(exit code 0)
+
+● Background command "Add roadmap scene, fix name pronunciations, regenerate
+changed narration" completed (exit code 0)
+
+  Made 1 scratchpad edit +21, read 1 file, ran 4 shell commands (ctrl+o to expand)
+
+● Now a contact-sheet builder so I can review many stills with few image reads.
+
+  Made 3 scratchpad edits +285 -1, read 13 files, ran 14 shell commands (ctrl+o to expand)
+
+● Background command "Render the final video" completed (exit code 0)
+
+● Render finished. Now verifying the finished file.
+
+  Made 1 scratchpad edit +12, read 2 files, ran 11 shell commands (ctrl+o to expand)
+
+● Background command "Render final video again and verify" completed (exit code
+0)
+
+  Made 1 scratchpad edit +22, read 2 files, ran 5 shell commands (ctrl+o to expand)
+
+● Update(README.md)
+  ⎿  Added 9 lines, removed 8 lines
+      178  
+      179  ## Video timestamps
+      180  
+      181 -To be filled in by the group after the video is recorded.     
+      181 +The recorded presentation is about 15 minutes long (15:19). Su
+          +btitles, chapters and the build files are in [docs/video](docs
+          +/video).                                                      
+      182  
+      183  | # | Segment | Time |
+      184  |---|---|---|
+      185 -| 1 | The game launching from the submitted project | |       
+      186 -| 2 | Meaningful manager choices, including a decision where s
+          -taff are constrained | |                                      
+      187 -| 3 | A dish going READY, SERVED, then payment | |            
+      188 -| 4 | A VIP or Critic behaviour | |                           
+      189 -| 5 | A Stage 3 feature | |                                   
+      190 -| 6 | One victory and one defeat | |                          
+      191 -| 7 | The stage tag comparisons and the diagrams | |          
+      185 +| 1 | The game launching from the submitted project | 1:45 |  
+      186 +| 2 | Meaningful manager choices, including a decision where s
+          +taff are constrained | 2:07 (turn 13, Waiter serves the Critic
+          + or takes an order), 2:42 (rejected choices) |                
+      187 +| 3 | A dish going READY, SERVED, then payment | 2:57 |       
+      188 +| 4 | A VIP or Critic behaviour | 3:21 |                      
+      189 +| 5 | A Stage 3 feature | 3:45 (Host), 4:00 (combo meals), 4:1
+          +9 (Happy Hour) |                                              
+      190 +| 6 | One victory and one defeat | 4:49 (victory), 5:15 (defea
+          +t) |                                                          
+      191 +| 7 | The stage tag comparisons and the diagrams | 5:39 (class
+          + diagrams), 6:51 (stage-1 to stage-2), 7:53 (stage-2 to stage-
+          +3), 8:23 (checks), 10:19 (sequence diagram) |                 
+      192 +| 8 | Individual contributions and key learning | 13:08 |     
+      193  
+      194  ## AI history
+      195  
+
+● Now the notes file next to the video.
+
+● Write(docs\video\README.md)
+  ⎿  Wrote 62 lines to docs\video\README.md
+       1 # Presentation video
+       2
+       3 `restaurant-rush-demo.mp4` is the group presentation: 15 minutes
+          19 seconds, 1920 x 1080, with narration.
+       4 `restaurant-rush-demo-small.mp4` is the same video re-encoded to
+          55 MB (the original is 166 MB, above the 100 MB limit of a norm
+         al Git push).
+       5
+       6 | File | What it is |
+       7 |---|---|
+     … +55 lines (ctrl+o to expand)
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● I've made the demo video with explainroo: 15 minutes 19 seconds at 1920×1080,
+  with synthetic narration. I checked it with explainroo's verify: narration
+  understood 99%, loudness −16 LUFS, no warnings. I haven't listened to it end
+  to end.
+
+  It follows the briefing's five blocks, in this order:
+
+  ┌───────┬───────────────────────────────────────────┐
+  │ Time  │                   Part                    │
+  ├───────┼───────────────────────────────────────────┤
+  │ 0:00  │ Game overview and the three stages        │
+  ├───────┼───────────────────────────────────────────┤
+  │ 1:45  │ Gameplay demonstration                    │
+  ├───────┼───────────────────────────────────────────┤
+  │ 5:39  │ Class diagrams and stage changes          │
+  ├───────┼───────────────────────────────────────────┤
+  │ 10:19 │ Sequence diagram                          │
+  ├───────┼───────────────────────────────────────────┤
+  │ 13:08 │ Individual contributions and key learning │
+  └───────┴───────────────────────────────────────────┘
+
+  The gameplay section covers all seven segments listed in the assignment, and
+  the class-diagram section covers the stage-tag comparisons.
+
+  The video isn't in members' own voices yet. The brief says each member should
+  explain a part, and the narration is a single synthetic voice (Kokoro
+  af_heart). docs/video/source/script.md has > Presenter from here: notes
+  suggesting who covers which part, based on the roles in your report. Those
+  assignments are my guess. The recording steps are in docs/video/README.md.
+  Re-rendering with recordings changes the timeline, so the README timestamps
+  would need refreshing.
+
+  What's on screen
+  - Terminals: every terminal line is real output from the game and from git,
+    captured from your stage tags. Long lines wrap like a terminal does. I
+    animated the typing but didn't edit any text.
+  - Turn-13 decision: I replayed runs/victory.txt with the Waiter's turn-13
+    choice changed. The Critic pays at 54 or 42 and the average is 81.2 or 78.8,
+    matching docs/test-notes.md.
+  - Diagrams: they are renders of your PDFs, zoomed in.
+
+  Changes in the repo
+  - New docs/video/: it holds the 166 MB MP4, a 55 MB re-encode for sharing (the
+    original is over GitHub's 100 MB push limit), subtitles, chapters, the
+    cover image and a source/ folder to rebuild the video. Nothing is committed.
+  - README: I filled in the "Video timestamps" table in README.md. That edit is
+    also uncommitted.
+
+  Things to decide
+  - Watermark: the video has explainroo's default explainroo.com watermark in
+    the corner. Setting "watermark": false in video.json removes it, and the
+    video must be re-rendered (about 12 minutes).
+  - Pronunciation: I spelled the member names phonetically for the voice, and
+    Whisper couldn't confirm them. Worth a listen to the team and learn… scenes.
+  - Block lengths: the class-diagram section runs about 4:40 against the
+    suggested 4:00, and the sequence section about 2:49 against 3:00. The total
+    is on target.
+
+> Remove the watermark and rerender
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Background command "Disable watermark, re-render and verify" completed (exit
+code 0)
+
+● Rendered. Let me confirm the watermark is gone in the actual MP4, then replace
+  the files in docs/video.
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+● Now update the notes file, which still described the watermark as present, and
+  fix the file sizes.
+
+● Update(docs\video\README.md)
+  ⎿  Removed 2 lines
+      41  2. In `video.json` set `"voice": { "provider": "recording", "sr
+          c": "assets/narration/" }`.
+      42  3. Render again. The timeline changes with the recordings, so c
+          opy the new times into the README table from `out/video.chapter
+          s.txt` and the scene starts in `build/timeline.json`.
+      43  
+      44 -The small `explainroo.com` mark in the corner is explainroo's d
+         -efault watermark. Set `"watermark": false` in `video.json` to r
+         -emove it.                                                      
+      45 -                                                               
+      44  ## Rebuilding
+      45  
+      46  The video is made with [explainroo](https://github.com/vincents
+          ch/explainroo).
+
+● Update(docs\video\README.md)  ⎿  Added 2 lines, removed 1 line
+      1  # Presentation video
+      2  
+      3  `restaurant-rush-demo.mp4` is the group presentation: 15 minutes
+          19 seconds, 1920 x 1080, with narration.
+      4 -`restaurant-rush-demo-small.mp4` is the same video re-encoded to
+        - 55 MB (the original is 166 MB, above the 100 MB limit of a norm
+        -al Git push).                                                   
+      4 +`restaurant-rush-demo-small.mp4` is the same video re-encoded to
+        + 54 MB (the original is 164 MB, above the 100 MB limit of a norm
+        +al Git push).                                                   
+      5 +The video has no watermark (`"watermark": false` in `source/vide
+        +o.json`).                                                       
+      6  
+      7  | File | What it is |
+      8  |---|---|
+
+● The watermark is removed and the video is re-rendered. Checking frames from
+  the new MP4 showed no mark in the corner.
+
+  - Quality: the video is still 15:19 at 1080p, and verify gives narration
+    understood 99%, −16 LUFS and no warnings.
+  - Timestamps: scene timing is unchanged, so the timestamps in README.md are
+    still correct.
+  - Files: I replaced the video, subtitles, chapters and cover in docs/video/,
+    and re-encoded the small version. The full file is 164 MB and the small one
+    is 54 MB.
+  - Docs: docs/video/source/video.json now has "watermark": false, and
+    docs/video/README.md no longer mentions the watermark.
+  - Not committed: nothing is committed. The README edit and the new docs/video/
+    folder are still uncommitted.
+
+  The video is still synthetic narration. The members' own recordings would
+  still need to be added, as noted in docs/video/README.md.

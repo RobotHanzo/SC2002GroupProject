@@ -99,6 +99,8 @@ Compare: https://github.com/RobotHanzo/SC2002GroupProject/compare/stage-1...stag
 
 The Stage 2 commits are `efec627`, `69a34cb`, `bc1cd9f` and `10f4b5e` plus the diagram and documentation commits after them.
 
+**Class change map:** 5 classes added, 7 existing classes modified, 5 classes unchanged, 0 classes deleted. The two enums are also unchanged, giving 7 unchanged Java source files when enums are included. Counts cover production code in `src/`, including `Main`, and exclude tests and documentation.
+
 **New files**
 
 | File | Responsibility |
@@ -134,6 +136,8 @@ The Stage 2 commits are `efec627`, `69a34cb`, `bc1cd9f` and `10f4b5e` plus the d
 Compare: https://github.com/RobotHanzo/SC2002GroupProject/compare/stage-2...stage-3
 
 The Stage 3 feature commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d210d3` and `a6e64d3`. They are followed by the diagram and documentation commits and by one clean-up commit, `74c50eb`, with its diagram commit `ba84062` (see "Stage 3 clean-up" below).
+
+**Class change map:** 5 classes added, 8 existing classes modified, 9 classes unchanged, 0 classes deleted. The two enums remain unchanged, giving 11 unchanged Java source files when enums are included. Three added classes implement the Stage 3 features; two are extracted by the separate clean-up refactor. These counts compare the complete submitted stage tags, including that refactor.
 
 **New files**
 
@@ -178,17 +182,18 @@ The Stage 3 feature commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d2
 
 ## Video timestamps
 
-To be filled in by the group after the video is recorded.
+The finished presentation is 15:19, with the group's own recorded voices fitted to the existing scene timing and quiet background music ducked under speech. Use the [full narrated video](docs/video/restaurant-rush-human-vo.mp4) or [smaller narrated video](docs/video/restaurant-rush-human-vo-small.mp4). Optional script-assisted English SRT/VTT sidecars, presenter scripts, edit details and the preserved silent masters are in [docs/video](docs/video).
 
 | # | Segment | Time |
 |---|---|---|
-| 1 | The game launching from the submitted project | |
-| 2 | Meaningful manager choices, including a decision where staff are constrained | |
-| 3 | A dish going READY, SERVED, then payment | |
-| 4 | A VIP or Critic behaviour | |
-| 5 | A Stage 3 feature | |
-| 6 | One victory and one defeat | |
-| 7 | The stage tag comparisons and the diagrams | |
+| 1 | The game launching from the submitted project | 1:45 |
+| 2 | Meaningful manager choices, including a decision where staff are constrained | 2:07 (turn 13, Waiter serves the Critic or takes an order), 2:42 (rejected choices) |
+| 3 | A dish going READY, SERVED, then payment | 2:57 |
+| 4 | A VIP or Critic behaviour | 3:21 |
+| 5 | A Stage 3 feature | 3:45 (Host), 4:00 (combo meals), 4:19 (Happy Hour) |
+| 6 | One victory and one defeat | 4:49 (victory), 5:15 (defeat) |
+| 7 | The stage tag comparisons and the diagrams | 5:39 (class diagrams), 6:51 (stage-1 to stage-2), 7:53 (stage-2 to stage-3), 8:23 (checks), 10:19 (sequence diagram) |
+| 8 | Individual contributions and key learning | 13:08 |
 
 ## AI history
 
