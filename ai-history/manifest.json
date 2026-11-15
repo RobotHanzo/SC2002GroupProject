@@ -1,0 +1,186 @@
+{
+  "format_version": 1,
+  "source_project_directory": "Claude Code local project logs for D:/Java Projects/SC2002GroupProject",
+  "scope": "Available top-level project-specific JSONL sessions only. No conversations are invented, summarized, or certified complete across other accounts or tools.",
+  "export_rules": [
+    "Retain visible user prompts and assistant replies in source record order.",
+    "Retain tool calls and textual results.",
+    "Exclude hidden thinking, account/API request metadata and binary attachments.",
+    "Apply explicit credential-pattern redaction if a match is encountered."
+  ],
+  "credential_pattern_redactions": {
+    "GitHub token": 0,
+    "API secret": 0,
+    "Google API key": 0,
+    "AWS access key": 0,
+    "Private key": 0,
+    "Authorization bearer": 0
+  },
+  "sessions": [
+    {
+      "source_file": "03a4b28b-05fd-4e94-b641-00d19448ccad.jsonl",
+      "source_sha256": "bf376c923edf6076dfbd0fad0b140702ef3fbd8b34ac342865dda27dad42627d",
+      "source_bytes": 27080434,
+      "first_timestamp": "2026-11-08T19:07:23.202Z",
+      "last_timestamp": "2026-11-08T20:32:14.994Z",
+      "export_file": "2026-11-08_03a4b28b-05fd-4e94-b641-00d19448ccad.md",
+      "export_sha256": "3cfcb590f26d947dbe202be587506e938db9f72d71125e271a6f556155d70760",
+      "export_bytes": 577853,
+      "visible_record_counts": {
+        "user": 153,
+        "no_visible_text_records": 84,
+        "assistant": 155
+      }
+    },
+    {
+      "source_file": "0acda2bc-7972-48f1-a3d7-a1d4210f61af.jsonl",
+      "source_sha256": "0dd33b75a640a4c57bc8420e3901c9c7255f2ef2d5090712c7042d8ba4f23599",
+      "source_bytes": 3926258,
+      "first_timestamp": "2026-11-08T18:43:35.476Z",
+      "last_timestamp": "2026-11-08T19:03:23.724Z",
+      "export_file": "2026-11-08_0acda2bc-7972-48f1-a3d7-a1d4210f61af.md",
+      "export_sha256": "d68d232c39e418a2236063e938659f02d476804aa82028b6e0d7d235ae032a36",
+      "export_bytes": 321036,
+      "visible_record_counts": {
+        "user": 59,
+        "no_visible_text_records": 31,
+        "assistant": 61
+      }
+    },
+    {
+      "source_file": "1f43995e-094f-4947-9ae5-428dce2df65b.jsonl",
+      "source_sha256": "47c8e62fe01dedb91b04cf19ba25affb38a60e0f251f049241a4fe1659edbf05",
+      "source_bytes": 29605973,
+      "first_timestamp": "2026-11-02T13:44:10.939Z",
+      "last_timestamp": "2026-11-02T14:48:24.992Z",
+      "export_file": "2026-11-02_1f43995e-094f-4947-9ae5-428dce2df65b.md",
+      "export_sha256": "eb094a26af3f301247393aae5f9dabb5a6fa1dae76c96bb8e077cb4a50880108",
+      "export_bytes": 305412,
+      "visible_record_counts": {
+        "user": 124,
+        "no_visible_text_records": 64,
+        "assistant": 111
+      }
+    },
+    {
+      "source_file": "50390978-1002-4649-a170-85ec10edb377.jsonl",
+      "source_sha256": "63dbc9c8438a7a2e352845a330984137bb19aec3e9f3f136510e0536412d5027",
+      "source_bytes": 7669536,
+      "first_timestamp": "2026-10-29T16:49:42.124Z",
+      "last_timestamp": "2026-10-29T16:53:20.812Z",
+      "export_file": "2026-10-29_50390978-1002-4649-a170-85ec10edb377.md",
+      "export_sha256": "ab772811efcfdf2f10ea7c1b5ded070212d44d03518ed75878d0cbfb0b6561ac",
+      "export_bytes": 63637,
+      "visible_record_counts": {
+        "user": 25,
+        "no_visible_text_records": 8,
+        "assistant": 26
+      }
+    },
+    {
+      "source_file": "58334ecd-a550-4689-807c-490f23cce4cd.jsonl",
+      "source_sha256": "6f15bfa9f4f11da3ba1a62b6009fd19942c5e5b6d57e1650d2fe9a960f204ebd",
+      "source_bytes": 9068993,
+      "first_timestamp": "2026-11-03T02:53:15.294Z",
+      "last_timestamp": "2026-11-03T03:14:31.028Z",
+      "export_file": "2026-11-03_58334ecd-a550-4689-807c-490f23cce4cd.md",
+      "export_sha256": "de7106875eebeaa8123acbeef635f77b7dd7cb6db7b533de7a6d7e4f338b4129",
+      "export_bytes": 409099,
+      "visible_record_counts": {
+        "user": 97,
+        "no_visible_text_records": 60,
+        "assistant": 105
+      }
+    },
+    {
+      "source_file": "62c101e8-09ba-43a9-9951-2389f1fbf004.jsonl",
+      "source_sha256": "512124681625574e6881fb1d5b21ff96ddb703e1fb14a690604222ce98c3cfc5",
+      "source_bytes": 30172941,
+      "first_timestamp": "2026-11-02T15:19:17.549Z",
+      "last_timestamp": "2026-11-02T19:16:06.120Z",
+      "export_file": "2026-11-02_62c101e8-09ba-43a9-9951-2389f1fbf004.md",
+      "export_sha256": "27d5e528dd7cae4a593430b8a21168c76f2f948d3f26d44b1f2d0ca992bb4cc2",
+      "export_bytes": 778090,
+      "visible_record_counts": {
+        "user": 300,
+        "no_visible_text_records": 161,
+        "assistant": 290
+      }
+    },
+    {
+      "source_file": "89131d8e-752d-44f1-bcca-d11bff93cc2a.jsonl",
+      "source_sha256": "f2cb54c9779bdfac52f49e792e463d214257810458e2653d12b56c007e5dd25d",
+      "source_bytes": 1483714,
+      "first_timestamp": "2026-11-03T13:09:39.307Z",
+      "last_timestamp": "2026-11-03T13:16:20.511Z",
+      "export_file": "2026-11-03_89131d8e-752d-44f1-bcca-d11bff93cc2a.md",
+      "export_sha256": "b4b7e536e3267b3c4cb44e4818f03ac50735dde389637b913772d332cf6e20ad",
+      "export_bytes": 308438,
+      "visible_record_counts": {
+        "user": 45,
+        "no_visible_text_records": 24,
+        "assistant": 47
+      }
+    },
+    {
+      "source_file": "993007f5-4958-443a-90bc-a2720eaa9939.jsonl",
+      "source_sha256": "faf96b66a05aac19e63b9806fae74488382478d75f98ea83c1e679388d9c2b92",
+      "source_bytes": 24964948,
+      "first_timestamp": "2026-11-02T14:49:22.675Z",
+      "last_timestamp": "2026-11-02T15:17:34.955Z",
+      "export_file": "2026-11-02_993007f5-4958-443a-90bc-a2720eaa9939.md",
+      "export_sha256": "964b79791c1e52960e5967b9e0e636b627c53f0ecd487e3e50ef75c855cad787",
+      "export_bytes": 361021,
+      "visible_record_counts": {
+        "user": 142,
+        "no_visible_text_records": 78,
+        "assistant": 169
+      }
+    },
+    {
+      "source_file": "a640241c-009a-4679-aacc-46a83ddb21f1.jsonl",
+      "source_sha256": "fe0b6445ee7943d665b3df6c4f6ce0110c93dc2f8349d01418796126a771ca73",
+      "source_bytes": 17491828,
+      "first_timestamp": "2026-11-02T09:10:50.789Z",
+      "last_timestamp": "2026-11-02T10:04:29.344Z",
+      "export_file": "2026-11-02_a640241c-009a-4679-aacc-46a83ddb21f1.md",
+      "export_sha256": "57597105fecd4fe6c11a901f72e2d0288a30c6eaa119c7deb2031579c1ba2f8c",
+      "export_bytes": 147336,
+      "visible_record_counts": {
+        "user": 58,
+        "no_visible_text_records": 25,
+        "assistant": 52
+      }
+    },
+    {
+      "source_file": "b3c70eff-8ab1-414e-a7fe-affc29819474.jsonl",
+      "source_sha256": "785e425467dbfc8d44bde18ed864b9e3699212cb07353affe155154dad72ec0b",
+      "source_bytes": 15722632,
+      "first_timestamp": "2026-11-03T09:17:15.390Z",
+      "last_timestamp": "2026-11-08T18:43:23.769Z",
+      "export_file": "2026-11-03_b3c70eff-8ab1-414e-a7fe-affc29819474.md",
+      "export_sha256": "260846db60b07aaa5a91a23eeded599d0764c9727862ec000454216279adf98c",
+      "export_bytes": 407724,
+      "visible_record_counts": {
+        "user": 105,
+        "no_visible_text_records": 68,
+        "assistant": 99
+      }
+    },
+    {
+      "source_file": "f14e90dd-fa4b-4d83-b00d-c63ca395dc43.jsonl",
+      "source_sha256": "e00f91e494a484b070449771234041a7cb6a853fa1c19c8a21ab4ba5d253618f",
+      "source_bytes": 804079,
+      "first_timestamp": "2026-11-02T14:00:14.797Z",
+      "last_timestamp": "2026-11-02T14:01:27.404Z",
+      "export_file": "2026-11-02_f14e90dd-fa4b-4d83-b00d-c63ca395dc43.md",
+      "export_sha256": "f4071c0bd86fed058de2193f531af0f323ec0d7aa4ea22c71225e6b3bf940b28",
+      "export_bytes": 311089,
+      "visible_record_counts": {
+        "user": 9,
+        "no_visible_text_records": 5,
+        "assistant": 8
+      }
+    }
+  ]
+}
