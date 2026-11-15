@@ -64,7 +64,7 @@ note right of game : The constructor also creates the Restaurant, the ArrivalSch
 main -> game : startGame()
 game -> cli : displayIntro(18)
 
-loop for each turn 1..18 (turns 1-5 shown)
+group Turns 1-5 expanded (each turn occurs once)
 
   == Turn 1: VIP arrives, manager turns Happy Hour on, Waiter seats the VIP ==
 
@@ -310,7 +310,11 @@ loop for each turn 1..18 (turns 1-5 shown)
     rest -> t1 : release()
   end
 
-  ... turns 6 to 18 run the same six steps for the other customers ...
+end
+
+loop for each remaining turn 6..18
+  game -> game : executeTurn()
+  note right of game : Same turn steps for the other customers:\narrivals; manager/staff actions; eating/payment;\nwaiting/abandonment. Details omitted.
 end
 
 game -> rest : **6 Result** won = hasMetObjective()

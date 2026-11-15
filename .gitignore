@@ -3,3 +3,6 @@
 
 # Java build output (see README for the build command)
 /out/
+
+# Local video production files; the submitted MP4 is in docs/.
+/docs/video/

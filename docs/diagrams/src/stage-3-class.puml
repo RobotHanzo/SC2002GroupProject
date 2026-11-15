@@ -496,9 +496,9 @@ end note
 
 note bottom of Restaurant
   <b>ENCAPSULATION</b>
-  getWaitingQueue() is read-only; a customer leaves the
-  queue only through seatFromQueue(), after the Waiter
-  or Host has accepted the seating.
+  getWaitingQueue() is read-only. seatFromQueue() removes
+  a customer only after the Waiter or Host accepts seating;
+  handleAbandonment() removes customers who leave.
 end note
 
 note right of HappyHour

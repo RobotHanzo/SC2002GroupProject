@@ -156,7 +156,7 @@ The Stage 3 feature commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d2
 | `entity/MenuItem.java` | No longer `final` (one word) | `ComboMeal` extends it, so Waiter, Chef, Cashier, Menu and Order treat a combo like any dish and need no change |
 | `entity/Customer.java` | Added `recoverSatisfaction`; `isAwaitingService()` became public; clean-up: added `getDisplayName()` | Happy Hour recovery and the controller select customers who are still waiting. The existing satisfaction clamp (`adjustSatisfaction`) is reused. `getDisplayName()` gives every message one way to name a customer |
 | `entity/Waiter.java` | `takeOrder` also takes the `HappyHour` and applies it after the customer's own price | Happy Hour is applied after the VIP discount and locked in the Order. Seating, serving and the Critic hook are untouched |
-| `entity/Restaurant.java` | Owns a `Host` and a `HappyHour` (with getters); the menu now lists two combos. Clean-up: `getWaitingQueue()` is read-only and `seatFromQueue` is the only way out of the queue; `getCustomersWithStatus`, `getSeatableCustomers`, `getCustomersToServe` and `getCustomersToCook` say what each staff member can do now; the three victory targets and `hasMetObjective()` | Registration of the new classes and of the combos, once, at set-up. The clean-up gives the queue and the staff-task rules one owner: the controller used to remove customers from the live queue itself, and the screen and the controller each worked out what a staff member can do. Payment and abandonment logic is untouched |
+| `entity/Restaurant.java` | Owns a `Host` and a `HappyHour` (with getters); the menu now lists two combos. Clean-up: `getWaitingQueue()` is read-only; seating removes customers through `seatFromQueue`, and abandonment removes them through `handleAbandonment`; `getCustomersWithStatus`, `getSeatableCustomers`, `getCustomersToServe` and `getCustomersToCook` say what each staff member can do now; the three victory targets and `hasMetObjective()` | Registration of the new classes and of the combos, once, at set-up. The clean-up gives the queue and the staff-task rules one owner: the controller used to remove customers from the live queue itself, and the screen and the controller each worked out what a staff member can do. Payment and abandonment logic is untouched |
 | `entity/Order.java` | Clean-up: removed the unused `orderId` and its static counter | Nothing read the id, and a static counter is global state shared by every game. Status rules and the locked bill are untouched |
 | `control/GameController.java` | New steps before the staff choices: Happy Hour activation and recovery, and the Host choice; `HappyHour.endTurn()` at the end of the turn; the waiting loop uses `isAwaitingService()`. Clean-up: command parsing and task execution moved to `ManagerCommand` and `StaffActions`; the result check moved to `Restaurant.hasMetObjective()` | The Stage 3 turn needs the new steps. The clean-up leaves the controller sequencing the six steps (324 to 150 lines). The Waiter and Chef logic, payment and result rule are unchanged |
 | `boundary/RestaurantCLI.java` | Host and Happy Hour prompts, Happy Hour status line, Host task line. Clean-up: no longer references `GameController`; the turn number and targets are passed in; the task lines print what `Restaurant` reports | Display and input only. Boundary and control no longer depend on each other |
@@ -182,7 +182,7 @@ The Stage 3 feature commits are `d6fbec7`, `0231d21`, `9ed8d12`, `9225d1b`, `7d2
 
 ## Video timestamps
 
-The finished presentation is 15:19, with the group's own recorded voices fitted to the existing scene timing and quiet background music ducked under speech. Use the [full narrated video](docs/video/restaurant-rush-human-vo.mp4) or [smaller narrated video](docs/video/restaurant-rush-human-vo-small.mp4). Optional script-assisted English SRT/VTT sidecars, presenter scripts, edit details and the preserved silent masters are in [docs/video](docs/video).
+The finished presentation is 15:19, with the group's own recorded voices and quiet background music ducked under speech. Watch the [narrated presentation](docs/restaurant-rush-human-vo.mp4).
 
 | # | Segment | Time |
 |---|---|---|
@@ -197,7 +197,16 @@ The finished presentation is 15:19, with the group's own recorded voices fitted 
 
 ## AI history
 
-Each member's AI chats are in their own folder: [Li MU-EN](docs/individual/Li%20MU-EN/chat-history), [Peramudhan](docs/individual/Peramudhan/chat-history), [Ryan](docs/individual/Ryan/chat-history), [Ye Fei](docs/individual/Ye%20Fei/chat-history).
+Each member's saved AI conversations are on their own branch:
+
+| Member | Personal AI-history branch |
+|---|---|
+| Li Mu-En | [ai-history/li-mu-en](https://github.com/RobotHanzo/SC2002GroupProject/tree/ai-history/li-mu-en/ai-history) |
+| Murugesan Peramudhan | [ai-history/peramudhan](https://github.com/RobotHanzo/SC2002GroupProject/tree/ai-history/peramudhan/ai-history) |
+| Chng Jing Yuen Ryan | [ai-history/ryan](https://github.com/RobotHanzo/SC2002GroupProject/tree/ai-history/ryan/ai-history) |
+| Ye Fei | [ai-history/ye-fei](https://github.com/RobotHanzo/SC2002GroupProject/tree/ai-history/ye-fei/ai-history) |
+
+The original exports are preserved in each branch. Li Mu-En's branch also includes recovered project conversations with a provenance manifest. Each member should check that their branch includes all project-related exchanges from the tools and accounts they used.
 
 ## Repository layout
 
@@ -209,4 +218,4 @@ Each member's AI chats are in their own folder: [Li MU-EN](docs/individual/Li%20
 | `docs/` | Assignment brief and briefing, test notes, UML diagrams (`docs/diagrams`, sources in `docs/diagrams/src`) |
 | `docs/individual/<member>/` | Each member's `reflection/` and `chat-history/` folders |
 
-The `individual` folders are directories in this repository, not Git branches.
+The `individual` folders keep the group's copies of member materials. Use the personal branch links above for the AI conversation histories.
